@@ -13,35 +13,47 @@ logger = logging.getLogger(__name__)
 class WhatsAppNotifier:
     """Sistema de notificação via WhatsApp"""
     
-    def __init__(self, phone: str, api_key: str):
+    def __init__(self, phone: str, api_key: str, phone2: str = None, api_key2: str = None):
         self.phone = phone
         self.api_key = api_key
+        self.phone2 = phone2
+        self.api_key2 = api_key2
         self.base_url = "https://api.callmebot.com/whatsapp.php"
     
     async def send_message(self, message: str) -> bool:
-        """Envia mensagem via WhatsApp"""
+        """Envia mensagem via WhatsApp para um ou ambos os números"""
+        success1 = await self._send_to_phone(message, self.phone, self.api_key)
+        
+        success2 = True
+        if self.phone2 and self.api_key2:
+            success2 = await self._send_to_phone(message, self.phone2, self.api_key2)
+        
+        return success1 and success2
+    
+    async def _send_to_phone(self, message: str, phone: str, api_key: str) -> bool:
+        """Envia mensagem para um número específico"""
         try:
             # Codifica a mensagem para URL
             encoded_message = urllib.parse.quote(message)
             
             # Monta a URL da API
-            url = f"{self.base_url}?phone={self.phone}&text={encoded_message}&apikey={self.api_key}"
+            url = f"{self.base_url}?phone={phone}&text={encoded_message}&apikey={api_key}"
             
             # Envia a requisição
             response = requests.get(url, timeout=10)
             
             if response.status_code == 200:
-                logger.info(f"Mensagem WhatsApp enviada com sucesso para {self.phone}")
+                logger.info(f"Mensagem WhatsApp enviada com sucesso para {phone}")
                 return True
             else:
-                logger.error(f"Erro ao enviar WhatsApp: {response.status_code} - {response.text}")
+                logger.error(f"Erro ao enviar WhatsApp para {phone}: {response.status_code} - {response.text}")
                 return False
                 
         except requests.RequestException as e:
-            logger.error(f"Erro na requisição WhatsApp: {e}")
+            logger.error(f"Erro na requisição WhatsApp para {phone}: {e}")
             return False
         except Exception as e:
-            logger.error(f"Erro inesperado no WhatsApp: {e}")
+            logger.error(f"Erro inesperado no WhatsApp para {phone}: {e}")
             return False
     
     async def send_support_request(self, user_data: dict) -> bool:

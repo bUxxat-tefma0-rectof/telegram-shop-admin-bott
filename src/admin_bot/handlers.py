@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from datetime import datetime
-from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 
@@ -893,10 +893,10 @@ Validade: {product['duration']} dias"""
         self.db.set_setting("search_system_enabled", str(new_status).lower())
         
         status_text = "ativado" if new_status else "desativado"
-                 await query.edit_message_text(
-             f"🟢 Sistema de pesquisa {status_text}!",
-             reply_markup=AdminKeyboards.back_keyboard("config_search")
-         )
+        await query.edit_message_text(
+            f"🟢 Sistema de pesquisa {status_text}!",
+            reply_markup=AdminKeyboards.back_keyboard("config_search")
+        )
     
     # Stubs para funções restantes (implementação básica)
     async def request_admin_remove(self, query, context):

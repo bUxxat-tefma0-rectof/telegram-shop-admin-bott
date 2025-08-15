@@ -31,8 +31,16 @@ class StoreHandlers:
         self.pending_payments = {}
         # Sistema de notificações para o canal
         self.notification_system = NotificationSystem(settings.STORE_BOT_TOKEN)
-        # Sistema de notificação WhatsApp
-        self.whatsapp_notifier = WhatsAppNotifier(settings.WHATSAPP_PHONE, settings.WHATSAPP_API_KEY) if settings.WHATSAPP_PHONE and settings.WHATSAPP_API_KEY else None
+        # Sistema de notificação WhatsApp (duplo)
+        if settings.WHATSAPP_PHONE and settings.WHATSAPP_API_KEY:
+            self.whatsapp_notifier = WhatsAppNotifier(
+                settings.WHATSAPP_PHONE, 
+                settings.WHATSAPP_API_KEY,
+                settings.WHATSAPP_PHONE_2,
+                settings.WHATSAPP_API_KEY_2
+            )
+        else:
+            self.whatsapp_notifier = None
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /start da loja"""
@@ -252,7 +260,6 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         await query.message.reply_text(
             f"🔍 @{bot_info.username} PROCURAR",
             reply_markup=ForceReply(
-                force_reply=True,
                 input_field_placeholder="Digite o nome do serviço (ex: NETFLIX)"
             )
         )
@@ -515,7 +522,7 @@ Confirma a compra?"""
             self.db.mark_login_as_sold(login['id'], user_id)
             
             # Registra compra
-            self.db.create_purchase(user_id, product_id, login['id'], product['price'])
+            purchase_id = self.db.create_purchase(user_id, product_id, login['id'], product['price'])
             
             # Registra transação
             self.db.create_transaction(user_id, "purchase", product['price'], product_id)
@@ -525,7 +532,7 @@ Confirma a compra?"""
             
             # Envia notificação de venda para o canal
             user_info = self.db.get_user(user_id)
-            purchase_info = {'id': purchase_id, 'amount': product['price']}
+            purchase_info = {'id': purchase_id or 0, 'amount': product['price']}
             await self.notification_system.send_sale_notification(user_info, product, purchase_info)
             
             # Envia notificação WhatsApp da venda
@@ -656,7 +663,6 @@ Clique no botão abaixo para continuar:""",
         await query.message.reply_text(
             f"💰 Qual valor deseja recarregar?\n\nMínimo: R$ {min_deposit:.2f}",
             reply_markup=ForceReply(
-                force_reply=True,
                 input_field_placeholder=f"Digite o valor (ex: {min_deposit:.0f})"
             )
         )

@@ -47,9 +47,13 @@ class Settings:
     # Maintenance Mode
     MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
     
-    # WhatsApp CallMeBot API
+    # WhatsApp CallMeBot API - Primeiro número
     WHATSAPP_PHONE = os.getenv('WHATSAPP_PHONE', '')
     WHATSAPP_API_KEY = os.getenv('WHATSAPP_API_KEY', '')
+    
+    # WhatsApp CallMeBot API - Segundo número
+    WHATSAPP_PHONE_2 = os.getenv('WHATSAPP_PHONE_2', '')
+    WHATSAPP_API_KEY_2 = os.getenv('WHATSAPP_API_KEY_2', '')
     
     # Bot Messages
     MESSAGES = {
