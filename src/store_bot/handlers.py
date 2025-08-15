@@ -97,31 +97,34 @@ class StoreHandlers:
         
         # Menu lateral removido - será customizado pelo usuário
     
+    async def safe_edit_message(self, query, text, reply_markup=None):
+        """Edita mensagem de forma segura, detectando se tem texto ou caption"""
+        try:
+            if query.message.text:
+                # Mensagem tem texto - usa edit_message_text
+                await self.safe_edit_message(query, text, reply_markup=reply_markup)
+            elif hasattr(query.message, 'caption'):
+                # Mensagem tem caption (foto) - usa edit_message_caption
+                await query.edit_message_caption(caption=text, reply_markup=reply_markup)
+            else:
+                # Sem texto nem caption - envia nova mensagem
+                await query.message.reply_text(text, reply_markup=reply_markup)
+        except Exception as e:
+            # Em caso de erro, envia nova mensagem
+            await query.message.reply_text(text, reply_markup=reply_markup)
+
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manipula todos os callbacks do bot da loja"""
         query = update.callback_query
         await query.answer()
-        
-        # Proteção contra erro "no text to edit"
-        if not query.message or not query.message.text:
-            # Se não há texto para editar, envia nova mensagem
-            if hasattr(query.message, 'caption') and query.message.caption:
-                # É uma mensagem com foto - pode editar caption
-                pass
-            else:
-                # Sem texto nem caption - envia nova mensagem
-                await query.message.reply_text(
-                    "🔄 Carregando menu...",
-                    reply_markup=StoreKeyboards.main_menu()
-                )
-                return
         
         user_id = query.from_user.id
         data = query.data
         
         # Verifica modo manutenção
         if self.db.get_setting("maintenance_mode") == "true":
-            await query.edit_message_text(
+            await self.safe_edit_message(
+                query,
                 "🔧 Sistema em manutenção. Tente novamente mais tarde.",
                 reply_markup=StoreKeyboards.back_main()
             )
@@ -188,17 +191,13 @@ class StoreHandlers:
 
 Escolha uma categoria para ver o ranking:"""
         
-        await query.edit_message_text(
-            ranking_text,
-            reply_markup=StoreKeyboards.ranking_menu())
+        await self.safe_edit_message(query, ranking_text, reply_markup=StoreKeyboards.ranking_menu())
     
     async def handle_support(self, query, context):
         """Redireciona para o suporte"""
         support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
         
-        await query.edit_message_text(
-            f"👨‍💻 Suporte\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}",
-            reply_markup=StoreKeyboards.back_main())
+        await self.safe_edit_message(query, f"👨‍💻 Suporte\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}", reply_markup=StoreKeyboards.back_main())
     
     async def show_info(self, query, context):
         """Mostra informações do bot"""
@@ -211,17 +210,13 @@ Escolha uma categoria para ver o ranking:"""
 🛠️ DEVELOPER INFO:
 O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o adm do mesmo, caso entre em contato para reclamar sobre material ou pedir para chamar o adm deste Bot ou algo do tipo, será bloqueado de imediato... Apenas o chame, caso queira conhecer os Bots disponíveis."""
         
-        await query.edit_message_text(
-            info_text,
-            reply_markup=StoreKeyboards.back_main())
+        await self.safe_edit_message(query, info_text, reply_markup=StoreKeyboards.back_main())
     
     async def request_search(self, query, context):
         """Solicita termo de pesquisa"""
         self.user_states[query.from_user.id] = WAITING_SEARCH_TERM
         
-        await query.edit_message_text(
-            "🔍 Pesquisar Produtos\n\nDigite o nome do produto que deseja buscar:",
-            reply_markup=StoreKeyboards.back_main())
+        await self.safe_edit_message(query, "🔍 Pesquisar Produtos\n\nDigite o nome do produto que deseja buscar:", reply_markup=StoreKeyboards.back_main())
     
     async def process_search(self, update: Update, context, search_term: str):
         """Processa pesquisa de produtos"""
@@ -271,9 +266,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
             for purchase in purchases:
                 history_text += f"• {purchase[0]} - R$ {purchase[1]:.2f}\n  📅 {purchase[2]}\n\n"
         
-        await query.edit_message_text(
-            history_text,
-            reply_markup=StoreKeyboards.back_keyboard("store_profile"))
+        await self.safe_edit_message(query, history_text, reply_markup=StoreKeyboards.back_keyboard("store_profile"))
     
     async def convert_affiliate_points(self, query, context):
         """Converte pontos de afiliado em saldo"""
@@ -284,9 +277,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         multiplier = float(self.db.get_setting("points_multiplier") or settings.POINTS_MULTIPLIER)
         
         if user['affiliate_points'] < min_points:
-            await query.edit_message_text(
-                f"❌ Você precisa de pelo menos {min_points} pontos para converter.\n\nSeus pontos: {user['affiliate_points']}",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, f"❌ Você precisa de pelo menos {min_points} pontos para converter.\n\nSeus pontos: {user['affiliate_points']}", reply_markup=StoreKeyboards.back_main()
             )
             return
         
@@ -306,9 +297,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         # Registra transação
         self.db.create_transaction(user_id, "affiliate", conversion_value)
         
-        await query.edit_message_text(
-            f"✅ Conversão realizada!\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}",
-            reply_markup=StoreKeyboards.back_main())
+        await self.safe_edit_message(query, f"✅ Conversão realizada!\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}", reply_markup=StoreKeyboards.back_main())
     
     async def show_main_menu(self, query, context):
         """Mostra menu principal"""
@@ -322,9 +311,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
             username=user['first_name'] or user['username'] or 'Usuário'
         )
         
-        await query.edit_message_text(
-            welcome_text,
-            reply_markup=StoreKeyboards.main_menu()
+        await self.safe_edit_message(query, welcome_text, reply_markup=StoreKeyboards.main_menu()
         )
     
     async def show_products(self, query, context):
@@ -332,9 +319,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         products = self.db.get_products()
         
         if not products:
-            await query.edit_message_text(
-                "📦 Nenhum produto disponível no momento.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "📦 Nenhum produto disponível no momento.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
@@ -351,14 +336,10 @@ Produtos disponíveis:"""
         available_products = [p for p in products if p['stock_count'] > 0]
         
         if not available_products:
-            await query.edit_message_text(
-                f"{text}\n\n❌ Todos os produtos estão sem estoque.",
-                reply_markup=StoreKeyboards.back_main())
+            await self.safe_edit_message(query, f"{text}\n\n❌ Todos os produtos estão sem estoque.", reply_markup=StoreKeyboards.back_main())
             return
         
-        await query.edit_message_text(
-            text,
-            reply_markup=StoreKeyboards.product_list(available_products))
+        await self.safe_edit_message(query, text, reply_markup=StoreKeyboards.product_list(available_products))
     
     async def show_product_details(self, query, context, product_id: int):
         """Mostra detalhes de um produto"""
@@ -367,9 +348,7 @@ Produtos disponíveis:"""
         product = next((p for p in products if p['id'] == product_id), None)
         
         if not product:
-            await query.edit_message_text(
-                "❌ Produto não encontrado.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Produto não encontrado.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
@@ -392,9 +371,7 @@ Agradecemos pela compreensão e desejamos boas compras!
         
         has_stock = product['stock_count'] > 0
         
-        await query.edit_message_text(
-            product_text,
-            reply_markup=StoreKeyboards.product_details(product_id, has_stock))
+        await self.safe_edit_message(query, product_text, reply_markup=StoreKeyboards.product_details(product_id, has_stock))
     
     async def initiate_purchase(self, query, context, product_id: int):
         """Inicia processo de compra"""
@@ -403,7 +380,7 @@ Agradecemos pela compreensão e desejamos boas compras!
         product = next((p for p in products if p['id'] == product_id), None)
         
         if not product:
-            await query.edit_message_text("❌ Produto não encontrado.")
+            await self.safe_edit_message(query, "❌ Produto não encontrado.")
             return
         
         # Verifica saldo
@@ -433,9 +410,7 @@ Saldo após compra: R$ {user['balance'] - product['price']:.2f}
 
 Confirma a compra?"""
         
-        await query.edit_message_text(
-            confirm_text,
-            reply_markup=StoreKeyboards.purchase_confirmation(product_id))
+        await self.safe_edit_message(query, confirm_text, reply_markup=StoreKeyboards.purchase_confirmation(product_id))
     
     async def process_purchase(self, query, context, product_id: int):
         """Processa a compra efetivamente"""
@@ -447,25 +422,19 @@ Confirma a compra?"""
         product = next((p for p in products if p['id'] == product_id), None)
         
         if not product or product['stock_count'] <= 0:
-            await query.edit_message_text(
-                "❌ Produto indisponível.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Produto indisponível.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
         if user['balance'] < product['price']:
-            await query.edit_message_text(
-                "❌ Saldo insuficiente.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Saldo insuficiente.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
         # Busca login disponível
         login = self.db.get_available_login(product_id)
         if not login:
-            await query.edit_message_text(
-                "❌ Nenhum login disponível.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Nenhum login disponível.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
@@ -518,9 +487,7 @@ Novo saldo: R$ {user['balance'] - product['price']:.2f}
 
 Obrigado pela compra! 🎉"""
             
-            await query.edit_message_text(
-                success_text,
-                reply_markup=StoreKeyboards.back_main())
+            await self.safe_edit_message(query, success_text, reply_markup=StoreKeyboards.back_main())
             
             # Log da compra
             self.db.add_log(
@@ -531,9 +498,7 @@ Obrigado pela compra! 🎉"""
             
         except Exception as e:
             logging.error(f"Erro ao processar compra: {e}")
-            await query.edit_message_text(
-                "❌ Erro ao processar compra. Contate o suporte.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Erro ao processar compra. Contate o suporte.", reply_markup=StoreKeyboards.back_main()
             )
     
     async def show_profile(self, query, context):
@@ -574,9 +539,7 @@ Obrigado pela compra! 🎉"""
 —💠 Pix Inseridos: R$ {total_recharges:.2f}
 —🎁 Gifts Resgatados: R$ {total_gifts:.2f}"""
         
-        await query.edit_message_text(
-            profile_text,
-            reply_markup=StoreKeyboards.profile_menu())
+        await self.safe_edit_message(query, profile_text, reply_markup=StoreKeyboards.profile_menu())
     
     async def show_recharge_menu(self, query, context):
         """Mostra menu de recarga"""
@@ -590,9 +553,7 @@ Obrigado pela compra! 🎉"""
 
 🔻 Recarga mínima: R$ {min_deposit:.2f}"""
         
-        await query.edit_message_text(
-            recharge_text,
-            reply_markup=StoreKeyboards.recharge_menu())
+        await self.safe_edit_message(query, recharge_text, reply_markup=StoreKeyboards.recharge_menu())
     
     async def request_recharge_amount(self, query, context):
         """Solicita valor de recarga"""
@@ -747,16 +708,12 @@ Obrigado pela compra! 🎉"""
                 elif ranking_type == "balance":
                     ranking_text += f"{position}°) {item['first_name']} {medal} Com R$ {item['balance']:.2f} de saldo\n"
         
-        await query.edit_message_text(
-            ranking_text,
-            reply_markup=StoreKeyboards.ranking_back())
+        await self.safe_edit_message(query, ranking_text, reply_markup=StoreKeyboards.ranking_back())
     
     async def check_payment_status(self, query, context, user_id: int):
         """Verifica status do pagamento"""
         if user_id not in self.pending_payments:
-            await query.edit_message_text(
-                "❌ Nenhum pagamento pendente encontrado.",
-                reply_markup=StoreKeyboards.back_main()
+            await self.safe_edit_message(query, "❌ Nenhum pagamento pendente encontrado.", reply_markup=StoreKeyboards.back_main()
             )
             return
         
@@ -772,9 +729,7 @@ Obrigado pela compra! 🎉"""
                 
                 del self.pending_payments[user_id]
                 
-                await query.edit_message_text(
-                    f"✅ Pagamento aprovado!\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
-                    reply_markup=StoreKeyboards.back_main())
+                await self.safe_edit_message(query, f"✅ Pagamento aprovado!\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.", reply_markup=StoreKeyboards.back_main())
             else:
                 await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
         else:

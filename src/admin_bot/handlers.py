@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.models import Database
 from config.settings import settings
 from utils.payment_system import PaymentSystem, ManualPaymentSystem
+from utils.sync_system import sync_system
 from admin_bot.keyboards import AdminKeyboards
 
 # Estados da conversa
@@ -158,6 +159,10 @@ class AdminHandlers:
             await query.edit_message_text(
                 f"👨‍💻 Suporte: {support_link}",
                 reply_markup=AdminKeyboards.back_keyboard("admin_back_main"))
+        elif data == "admin_actions":
+            await self.show_admin_actions(query, context)
+        elif data == "admin_transactions":
+            await self.show_admin_transactions(query, context)
     
     async def handle_config_action(self, query, context, data):
         """Manipula ações de configuração"""
@@ -228,8 +233,9 @@ class AdminHandlers:
             # Valida se é um link válido
             if text.startswith(('http://', 'https://', 't.me/', '@')):
                 self.db.set_setting("support_link", text)
+                await sync_system.sync_setting_change("support_link", text)
                 await update.message.reply_text(
-                    f"✅ SUPORTE ATUALIZADO!\n\nNovo link: {text}\n\nAgora os usuários serão redirecionados para este link."
+                    f"✅ SUPORTE ATUALIZADO!\n\nNovo link: {text}\n\nAgora os usuários serão redirecionados para este link.\n\n🔄 Loja sincronizada automaticamente!"
                 )
                 del self.user_states[user_id]
             else:
@@ -241,8 +247,9 @@ class AdminHandlers:
             # Valida separador
             if len(text) <= 5 and text not in ['/', '\\', '|']:
                 self.db.set_setting("separator", text)
+                await sync_system.sync_setting_change("separator", text)
                 await update.message.reply_text(
-                    f"✅ SEPARADOR ATUALIZADO!\n\nNovo separador: {text}\n\nAgora use este separador para adicionar produtos."
+                    f"✅ SEPARADOR ATUALIZADO!\n\nNovo separador: {text}\n\nAgora use este separador para adicionar produtos.\n\n🔄 Sistema sincronizado!"
                 )
                 del self.user_states[user_id]
             else:
@@ -494,9 +501,10 @@ Bônus atual: R$ {bonus}"""
         new_mode = not current_mode
         
         self.db.set_setting("maintenance_mode", str(new_mode).lower())
+        await sync_system.sync_setting_change("maintenance_mode", str(new_mode).lower())
         
         status = "ativado" if new_mode else "desativado"
-        await query.edit_message_text(f"🔧 Modo manutenção {status}!")
+        await query.edit_message_text(f"🔧 Modo manutenção {status}!\n\n🔄 Loja sincronizada automaticamente!")
     
     async def request_login_data(self, query, context):
         """Solicita dados de login para adicionar ao estoque"""
@@ -719,3 +727,64 @@ Validade: {product['duration']} dias"""
         await query.edit_message_text(
             welcome_text,
             reply_markup=AdminKeyboards.main_menu())
+    
+    async def show_admin_actions(self, query, context):
+        """Mostra menu de ações administrativas"""
+        actions_text = "🔖 AÇÕES ADMINISTRATIVAS\n\n"
+        actions_text += "Escolha uma ação para executar:\n\n"
+        actions_text += "📊 Estatísticas em tempo real\n"
+        actions_text += "🗂️ Gerenciamento de usuários\n"
+        actions_text += "📋 Relatórios detalhados\n"
+        actions_text += "🛡️ Moderação avançada"
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 ESTATÍSTICAS", callback_data="action_stats")],
+            [InlineKeyboardButton("👥 GERENCIAR USUÁRIOS", callback_data="action_users")],
+            [InlineKeyboardButton("📋 RELATÓRIOS", callback_data="action_reports")],
+            [InlineKeyboardButton("🛡️ MODERAÇÃO", callback_data="action_moderation")],
+            [InlineKeyboardButton("↩️ VOLTAR", callback_data="admin_dashboard")]
+        ]
+        
+        await query.edit_message_text(
+            actions_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def show_admin_transactions(self, query, context):
+        """Mostra transações administrativas"""
+        # Busca últimas transações
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT t.id, t.user_id, t.type, t.amount, t.created_at, u.first_name
+            FROM transactions t
+            LEFT JOIN users u ON t.user_id = u.user_id
+            ORDER BY t.created_at DESC
+            LIMIT 10
+        ''')
+        transactions = cursor.fetchall()
+        conn.close()
+        
+        if not transactions:
+            transactions_text = "🔄 TRANSAÇÕES\n\nNenhuma transação encontrada."
+        else:
+            transactions_text = "🔄 ÚLTIMAS TRANSAÇÕES\n\n"
+            
+            for trans in transactions:
+                user_name = trans[5] or f"ID {trans[1]}"
+                type_emoji = "💰" if trans[2] == "recharge" else "🛒" if trans[2] == "purchase" else "🎁"
+                transactions_text += f"{type_emoji} {user_name}\n"
+                transactions_text += f"   Tipo: {trans[2]}\n"
+                transactions_text += f"   Valor: R$ {trans[3]:.2f}\n"
+                transactions_text += f"   Data: {trans[4]}\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 VER TODAS", callback_data="view_all_transactions")],
+            [InlineKeyboardButton("💹 ESTATÍSTICAS", callback_data="transaction_stats")],
+            [InlineKeyboardButton("↩️ VOLTAR", callback_data="admin_dashboard")]
+        ]
+        
+        await query.edit_message_text(
+            transactions_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
