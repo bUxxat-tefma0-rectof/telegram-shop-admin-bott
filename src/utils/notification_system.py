@@ -24,9 +24,7 @@ class NotificationSystem:
             # Envia para o canal
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
-                text=sale_message,
-                parse_mode=ParseMode.MARKDOWN
-            )
+                text=sale_message)
             
             logger.info(f"Notificação de venda enviada para o canal: {purchase_info['id']}")
             return True
@@ -130,9 +128,7 @@ class NotificationSystem:
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
-                text=message,
-                parse_mode=ParseMode.MARKDOWN
-            )
+                text=message)
             
             logger.info(f"Notificação de recarga enviada para o canal: R$ {amount:.2f}")
             return True
@@ -162,9 +158,7 @@ class NotificationSystem:
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
-                text=message,
-                parse_mode=ParseMode.MARKDOWN
-            )
+                text=message)
             
             logger.info(f"Notificação de novo usuário enviada para o canal: {user_info['user_id']}")
             return True
@@ -204,9 +198,7 @@ class NotificationSystem:
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
-                text=message,
-                parse_mode=ParseMode.MARKDOWN
-            )
+                text=message)
             
             logger.info(f"Alerta de estoque enviado para o canal: {product_name}")
             return True

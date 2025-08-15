@@ -194,9 +194,7 @@ COMPRAS:
         
         await update.message.reply_text(
             alerts_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=InlineKeyboardMarkup(keyboard))
     
     async def handle_inline_query(self, update: Update, context):
         """Manipula consultas inline para pesquisa de produtos"""
@@ -281,9 +279,7 @@ COMPRAS:
             try:
                 await self.application.bot.send_message(
                     chat_id=user_row[0],
-                    text=alert_message,
-                    parse_mode=ParseMode.MARKDOWN
-                )
+                    text=alert_message)
             except Exception as e:
                 logger.error(f"Erro ao enviar alerta para {user_row[0]}: {e}")
     

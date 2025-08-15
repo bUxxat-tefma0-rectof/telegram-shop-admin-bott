@@ -58,20 +58,17 @@ class Settings:
 🎭 **Quantidade de afiliados:** {affiliates_count}
 🎖️ **Pontos de indicação:** {points}
 """,
-        'welcome_store': """
-🥇Descubra como nosso bot pode transformar sua experiência de compras!
-Ele facilita a busca por diversos produtos e serviços, garantindo que você encontre o que precisa com o melhor preço e excelente custo-benefício.
-Importante: Não realizamos reembolsos em dinheiro. O suporte estará disponível por até 48 horas após a entrega das informações, com reembolso em créditos no bot, se necessário.
+        'welcome_store': """🥇 BEM-VINDO À NOSSA LOJA!
 
-👥**Grupo De Clientes:**
+Descubra produtos com o melhor preço e qualidade!
 
-👨‍💻 **Link De Suporte:** {support_link}
+👥 Grupo De Clientes: Em breve
+👨‍💻 Suporte: {support_link}
 
-ℹ️**Seus Dados:**
-🆔**ID:** {user_id}
-💸**Saldo Atual:** R${balance:.2f}
-🪪**Usuário:** {username}
-""",
+ℹ️ Seus Dados:
+🆔 ID: {user_id}  
+💸 Saldo: R${balance:.2f}
+🪪 Usuário: {username}""",
         'admin_dashboard': """
 ⚙️ **DASHBOARD** @{bot_username}
 📅 **Vencimento:** {expiration}

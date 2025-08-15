@@ -68,9 +68,7 @@ class AdminHandlers:
         await update.message.reply_photo(
             photo=image_url,
             caption=welcome_text,
-            reply_markup=AdminKeyboards.main_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.main_menu())
         
         # Define menu lateral
         await update.message.reply_text(
@@ -108,9 +106,7 @@ class AdminHandlers:
         
         await update.message.reply_text(
             dashboard_text,
-            reply_markup=AdminKeyboards.admin_dashboard(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.admin_dashboard())
     
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manipula todos os callbacks do bot admin"""
@@ -165,9 +161,7 @@ class AdminHandlers:
             support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
             await query.edit_message_text(
                 f"👨‍💻 **Suporte:** {support_link}",
-                reply_markup=AdminKeyboards.back_keyboard("admin_back_main"),
-                parse_mode=ParseMode.MARKDOWN
-            )
+                reply_markup=AdminKeyboards.back_keyboard("admin_back_main"))
     
     async def handle_config_action(self, query, context, data):
         """Manipula ações de configuração"""
@@ -275,8 +269,7 @@ class AdminHandlers:
         
         await query.edit_message_text(
             dashboard_text,
-            reply_markup=AdminKeyboards.admin_dashboard(),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=AdminKeyboards.admin_dashboard()
         )
     
     async def show_config_menu(self, query, context):
@@ -292,8 +285,7 @@ class AdminHandlers:
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.admin_config_menu(),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=AdminKeyboards.admin_config_menu()
         )
     
     async def show_general_config(self, query, context):
@@ -311,8 +303,7 @@ separador é o caractér que separa as informações quando você vai alterar al
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.general_config(),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=AdminKeyboards.general_config()
         )
     
     async def show_admin_management(self, query, context):
@@ -327,9 +318,7 @@ Use os botões abaixo para fazer as alterações necessárias"""
         
         await query.edit_message_text(
             admin_text,
-            reply_markup=AdminKeyboards.admin_management(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.admin_management())
     
     async def show_affiliate_config(self, query, context):
         """Mostra configuração de afiliados"""
@@ -351,9 +340,7 @@ Use os botões abaixo para fazer as alterações necessárias"""
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.affiliate_config(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.affiliate_config())
     
     async def show_user_config(self, query, context):
         """Mostra configuração de usuários"""
@@ -367,9 +354,7 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.user_config(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.user_config())
     
     async def show_pix_config(self, query, context):
         """Mostra configuração PIX"""
@@ -383,9 +368,7 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.pix_config(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.pix_config())
     
     async def show_login_config(self, query, context):
         """Mostra configuração de logins"""
@@ -403,9 +386,7 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.login_config(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.login_config())
     
     async def show_search_config(self, query, context):
         """Mostra configuração de pesquisa"""
@@ -414,9 +395,7 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             config_text,
-            reply_markup=AdminKeyboards.search_config(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.search_config())
     
     async def show_admin_products(self, query, context):
         """Mostra produtos disponíveis para admin"""
@@ -445,9 +424,7 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=InlineKeyboardMarkup(keyboard))
     
     async def show_admin_profile(self, query, context):
         """Mostra perfil do admin"""
@@ -461,17 +438,13 @@ Bônus atual: R$ {bonus}"""
         
         await query.edit_message_text(
             profile_text,
-            reply_markup=AdminKeyboards.back_keyboard("admin_back_main"),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.back_keyboard("admin_back_main"))
     
     async def show_admin_search(self, query, context):
         """Mostra pesquisa admin"""
         await query.edit_message_text(
             "🔍 **PESQUISA ADMINISTRATIVA**\n\nFuncionalidade de pesquisa.",
-            reply_markup=AdminKeyboards.back_keyboard("admin_back_main"),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.back_keyboard("admin_back_main"))
     
     async def request_add_balance(self, query, context):
         """Solicita valor para adicionar saldo"""
@@ -500,9 +473,7 @@ Bônus atual: R$ {bonus}"""
 Envie os logins no formato:
 **NOME{separator}VALOR{separator}DESCRICAO{separator}EMAIL{separator}SENHA{separator}DURACAO**
 
-Para abastecer mais de um login, envie um abaixo do outro.""",
-            parse_mode=ParseMode.MARKDOWN
-        )
+Para abastecer mais de um login, envie um abaixo do outro.""")
     
     async def process_login_data(self, update: Update, context, text):
         """Processa dados de login recebidos"""
@@ -562,9 +533,7 @@ Para abastecer mais de um login, envie um abaixo do outro.""",
         
         await query.edit_message_text(
             stock_text,
-            reply_markup=AdminKeyboards.back_keyboard("config_logins"),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.back_keyboard("config_logins"))
     
     async def process_admin_purchase(self, query, context, product_id: int):
         """Processa compra do admin (grátis)"""
@@ -603,9 +572,7 @@ Para abastecer mais de um login, envie um abaixo do outro.""",
         
         await query.edit_message_text(
             success_text,
-            reply_markup=AdminKeyboards.back_keyboard("admin_logins"),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.back_keyboard("admin_logins"))
     
     def get_product_instructions(self, product_name: str) -> str:
         """Retorna instruções de uso baseadas no produto"""
@@ -671,6 +638,4 @@ Para abastecer mais de um login, envie um abaixo do outro.""",
         
         await query.edit_message_text(
             welcome_text,
-            reply_markup=AdminKeyboards.main_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=AdminKeyboards.main_menu())

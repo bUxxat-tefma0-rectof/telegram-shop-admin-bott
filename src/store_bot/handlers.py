@@ -38,9 +38,7 @@ class StoreHandlers:
         # Verifica modo manutenção
         if self.db.get_setting("maintenance_mode") == "true":
             await update.message.reply_text(
-                "🔧 **Sistema em manutenção**\n\nO bot está temporariamente indisponível. Tente novamente mais tarde.",
-                parse_mode=ParseMode.MARKDOWN
-            )
+                "🔧 **Sistema em manutenção**\n\nO bot está temporariamente indisponível. Tente novamente mais tarde.")
             return
         
         # Registra ou atualiza usuário
@@ -94,8 +92,7 @@ class StoreHandlers:
         await update.message.reply_photo(
             photo=image_url,
             caption=welcome_text,
-            reply_markup=StoreKeyboards.main_menu(),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=StoreKeyboards.main_menu()
         )
         
         # Define menu lateral
@@ -183,9 +180,7 @@ Escolha uma categoria para ver o ranking:"""
         
         await query.edit_message_text(
             ranking_text,
-            reply_markup=StoreKeyboards.ranking_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.ranking_menu())
     
     async def handle_support(self, query, context):
         """Redireciona para o suporte"""
@@ -193,9 +188,7 @@ Escolha uma categoria para ver o ranking:"""
         
         await query.edit_message_text(
             f"👨‍💻 **Suporte**\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}",
-            reply_markup=StoreKeyboards.back_main(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_main())
     
     async def show_info(self, query, context):
         """Mostra informações do bot"""
@@ -210,9 +203,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await query.edit_message_text(
             info_text,
-            reply_markup=StoreKeyboards.back_main(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_main())
     
     async def request_search(self, query, context):
         """Solicita termo de pesquisa"""
@@ -220,9 +211,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await query.edit_message_text(
             "🔍 **Pesquisar Produtos**\n\nDigite o nome do produto que deseja buscar:",
-            reply_markup=StoreKeyboards.back_main(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_main())
     
     async def process_search(self, update: Update, context, search_term: str):
         """Processa pesquisa de produtos"""
@@ -241,9 +230,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await update.message.reply_text(
             search_text,
-            reply_markup=StoreKeyboards.search_results(products),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.search_results(products))
         
         del self.user_states[user_id]
     
@@ -276,9 +263,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await query.edit_message_text(
             history_text,
-            reply_markup=StoreKeyboards.back_keyboard("store_profile"),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_keyboard("store_profile"))
     
     async def convert_affiliate_points(self, query, context):
         """Converte pontos de afiliado em saldo"""
@@ -313,9 +298,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await query.edit_message_text(
             f"✅ **Conversão realizada!**\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}",
-            reply_markup=StoreKeyboards.back_main(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_main())
     
     async def show_main_menu(self, query, context):
         """Mostra menu principal"""
@@ -331,8 +314,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         await query.edit_message_text(
             welcome_text,
-            reply_markup=StoreKeyboards.main_menu(),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=StoreKeyboards.main_menu()
         )
     
     async def show_products(self, query, context):
@@ -361,16 +343,12 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         if not available_products:
             await query.edit_message_text(
                 f"{text}\n\n❌ Todos os produtos estão sem estoque.",
-                reply_markup=StoreKeyboards.back_main(),
-                parse_mode=ParseMode.MARKDOWN
-            )
+                reply_markup=StoreKeyboards.back_main())
             return
         
         await query.edit_message_text(
             text,
-            reply_markup=StoreKeyboards.product_list(available_products),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.product_list(available_products))
     
     async def show_product_details(self, query, context, product_id: int):
         """Mostra detalhes de um produto"""
@@ -406,9 +384,7 @@ Agradecemos pela compreensão e desejamos boas compras!
         
         await query.edit_message_text(
             product_text,
-            reply_markup=StoreKeyboards.product_details(product_id, has_stock),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.product_details(product_id, has_stock))
     
     async def initiate_purchase(self, query, context, product_id: int):
         """Inicia processo de compra"""
@@ -449,9 +425,7 @@ Confirma a compra?"""
         
         await query.edit_message_text(
             confirm_text,
-            reply_markup=StoreKeyboards.purchase_confirmation(product_id),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.purchase_confirmation(product_id))
     
     async def process_purchase(self, query, context, product_id: int):
         """Processa a compra efetivamente"""
@@ -536,9 +510,7 @@ Obrigado pela compra! 🎉"""
             
             await query.edit_message_text(
                 success_text,
-                reply_markup=StoreKeyboards.back_main(),
-                parse_mode=ParseMode.MARKDOWN
-            )
+                reply_markup=StoreKeyboards.back_main())
             
             # Log da compra
             self.db.add_log(
@@ -594,9 +566,7 @@ Obrigado pela compra! 🎉"""
         
         await query.edit_message_text(
             profile_text,
-            reply_markup=StoreKeyboards.profile_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.profile_menu())
     
     async def show_recharge_menu(self, query, context):
         """Mostra menu de recarga"""
@@ -612,9 +582,7 @@ Obrigado pela compra! 🎉"""
         
         await query.edit_message_text(
             recharge_text,
-            reply_markup=StoreKeyboards.recharge_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.recharge_menu())
     
     async def request_recharge_amount(self, query, context):
         """Solicita valor de recarga"""
@@ -628,9 +596,7 @@ Obrigado pela compra! 🎉"""
 🔻 **Recarga mínima:** R$ {min_deposit:.2f}
 
 ⚠️ Por favor, envie o valor que deseja recarregar agora.""",
-            reply_markup=StoreKeyboards.back_main(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.back_main())
     
     async def handle_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manipula entradas de texto"""
@@ -720,9 +686,7 @@ Obrigado pela compra! 🎉"""
                 
                 await update.message.reply_text(
                     payment_text,
-                    reply_markup=StoreKeyboards.payment_waiting(),
-                    parse_mode=ParseMode.MARKDOWN
-                )
+                    reply_markup=StoreKeyboards.payment_waiting())
             else:
                 await update.message.reply_text(
                     f"❌ Erro ao gerar pagamento: {payment_result['error']}",
@@ -738,9 +702,7 @@ Obrigado pela compra! 🎉"""
                 f"Valor: R$ {amount:.2f}\n"
                 f"ID: {manual_result['payment_id']}\n\n"
                 f"Entre em contato com o suporte para confirmar o pagamento.",
-                reply_markup=StoreKeyboards.back_main(),
-                parse_mode=ParseMode.MARKDOWN
-            )
+                reply_markup=StoreKeyboards.back_main())
     
     async def show_ranking(self, query, context, ranking_type: str):
         """Mostra ranking"""
@@ -777,9 +739,7 @@ Obrigado pela compra! 🎉"""
         
         await query.edit_message_text(
             ranking_text,
-            reply_markup=StoreKeyboards.ranking_back(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.ranking_back())
     
     async def check_payment_status(self, query, context, user_id: int):
         """Verifica status do pagamento"""
@@ -804,9 +764,7 @@ Obrigado pela compra! 🎉"""
                 
                 await query.edit_message_text(
                     f"✅ **Pagamento aprovado!**\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
-                    reply_markup=StoreKeyboards.back_main(),
-                    parse_mode=ParseMode.MARKDOWN
-                )
+                    reply_markup=StoreKeyboards.back_main())
             else:
                 await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
         else:
@@ -914,9 +872,7 @@ Indique mais e aumente seus ganhos!"""
         
         await update.message.reply_text(
             affiliate_text,
-            reply_markup=StoreKeyboards.affiliate_menu(),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            reply_markup=StoreKeyboards.affiliate_menu())
     
     def get_product_instructions(self, product_name: str) -> str:
         """Retorna instruções de uso automáticas baseadas no produto"""
