@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.models import Database
 from config.settings import settings
 from utils.payment_system import PaymentSystem, ManualPaymentSystem
+from utils.notification_system import NotificationSystem
 from store_bot.keyboards import StoreKeyboards
 
 # Estados da conversa
@@ -27,6 +28,8 @@ class StoreHandlers:
         self.manual_payment = manual_payment
         self.user_states = {}
         self.pending_payments = {}
+        # Sistema de notificações para o canal
+        self.notification_system = NotificationSystem(settings.STORE_BOT_TOKEN)
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /start da loja"""
@@ -70,6 +73,9 @@ class StoreHandlers:
                 self.db.create_transaction(user_id, "bonus", registration_bonus)
             
             user = self.db.get_user(user_id)
+            
+            # Envia notificação de novo usuário para o canal
+            await self.notification_system.send_new_user_notification(user, referred_by)
         
         # Busca link de suporte configurado
         support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
@@ -168,6 +174,148 @@ class StoreHandlers:
         # Afiliados
         elif data == "convert_points":
             await self.convert_affiliate_points(query, context)
+    
+    async def show_ranking_menu(self, query, context):
+        """Mostra menu de ranking"""
+        ranking_text = """🏆 **RANKINGS DA LOJA**
+
+Escolha uma categoria para ver o ranking:"""
+        
+        await query.edit_message_text(
+            ranking_text,
+            reply_markup=StoreKeyboards.ranking_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def handle_support(self, query, context):
+        """Redireciona para o suporte"""
+        support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
+        
+        await query.edit_message_text(
+            f"👨‍💻 **Suporte**\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}",
+            reply_markup=StoreKeyboards.back_main(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def show_info(self, query, context):
+        """Mostra informações do bot"""
+        bot_info = await context.bot.get_me()
+        
+        info_text = f"""ℹ️ **SOFTWARE INFO:**
+🤖**BOT:** @{bot_info.username}
+🤖**VERSION:** 1.0.0
+
+🛠️ **DEVELOPER INFO:**
+O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o adm do mesmo, caso entre em contato para reclamar sobre material ou pedir para chamar o adm deste Bot ou algo do tipo, será bloqueado de imediato... Apenas o chame, caso queira conhecer os Bots disponíveis."""
+        
+        await query.edit_message_text(
+            info_text,
+            reply_markup=StoreKeyboards.back_main(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def request_search(self, query, context):
+        """Solicita termo de pesquisa"""
+        self.user_states[query.from_user.id] = WAITING_SEARCH_TERM
+        
+        await query.edit_message_text(
+            "🔍 **Pesquisar Produtos**\n\nDigite o nome do produto que deseja buscar:",
+            reply_markup=StoreKeyboards.back_main(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def process_search(self, update: Update, context, search_term: str):
+        """Processa pesquisa de produtos"""
+        user_id = update.effective_user.id
+        
+        products = self.db.search_products(search_term)
+        
+        if not products:
+            await update.message.reply_text(
+                f"❌ Nenhum produto encontrado para '{search_term}'",
+                reply_markup=StoreKeyboards.back_main()
+            )
+            return
+        
+        search_text = f"🔍 **Resultados para '{search_term}':**\n\n"
+        
+        await update.message.reply_text(
+            search_text,
+            reply_markup=StoreKeyboards.search_results(products),
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        del self.user_states[user_id]
+    
+    async def show_purchase_history(self, query, context):
+        """Mostra histórico de compras do usuário"""
+        user_id = query.from_user.id
+        
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT p.name, pu.amount, pu.purchase_date 
+            FROM purchases pu
+            JOIN products p ON pu.product_id = p.id
+            WHERE pu.user_id = ?
+            ORDER BY pu.purchase_date DESC
+            LIMIT 20
+        ''', (user_id,))
+        
+        purchases = cursor.fetchall()
+        conn.close()
+        
+        if not purchases:
+            history_text = "📊 **Histórico de Compras**\n\nVocê ainda não realizou nenhuma compra."
+        else:
+            history_text = "📊 **Histórico de Compras**\n\n"
+            
+            for purchase in purchases:
+                history_text += f"• {purchase[0]} - R$ {purchase[1]:.2f}\n  📅 {purchase[2]}\n\n"
+        
+        await query.edit_message_text(
+            history_text,
+            reply_markup=StoreKeyboards.back_keyboard("store_profile"),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def convert_affiliate_points(self, query, context):
+        """Converte pontos de afiliado em saldo"""
+        user_id = query.from_user.id
+        user = self.db.get_user(user_id)
+        
+        min_points = int(self.db.get_setting("min_points_to_convert") or settings.MIN_POINTS_TO_CONVERT)
+        multiplier = float(self.db.get_setting("points_multiplier") or settings.POINTS_MULTIPLIER)
+        
+        if user['affiliate_points'] < min_points:
+            await query.edit_message_text(
+                f"❌ Você precisa de pelo menos {min_points} pontos para converter.\n\nSeus pontos: {user['affiliate_points']}",
+                reply_markup=StoreKeyboards.back_main()
+            )
+            return
+        
+        # Calcula valor da conversão
+        conversion_value = user['affiliate_points'] * multiplier
+        
+        # Atualiza banco
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE users SET affiliate_points = 0, balance = balance + ? WHERE user_id = ?',
+            (conversion_value, user_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        # Registra transação
+        self.db.create_transaction(user_id, "affiliate", conversion_value)
+        
+        await query.edit_message_text(
+            f"✅ **Conversão realizada!**\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}",
+            reply_markup=StoreKeyboards.back_main(),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     async def show_main_menu(self, query, context):
         """Mostra menu principal"""
@@ -353,6 +501,16 @@ Confirma a compra?"""
             
             # Processa pontos de afiliado se configurado
             await self.process_affiliate_points(user_id, product['price'])
+            
+            # Envia notificação de venda para o canal
+            user_info = self.db.get_user(user_id)
+            purchase_info = {'id': purchase_id, 'amount': product['price']}
+            await self.notification_system.send_sale_notification(user_info, product, purchase_info)
+            
+            # Verifica se precisa enviar alerta de estoque baixo
+            new_stock = product['stock_count'] - 1
+            if new_stock <= 5:
+                await self.notification_system.send_stock_alert(product['name'], new_stock)
             
             # Monta mensagem de sucesso
             success_text = f"""✅ **COMPRA REALIZADA COM SUCESSO!**
@@ -617,9 +775,64 @@ Obrigado pela compra! 🎉"""
             parse_mode=ParseMode.MARKDOWN
         )
     
-    # Implementar métodos restantes...
-    
-    async def process_affiliate_points(self, user_id: int, amount: float):
+            async def check_payment_status(self, query, context, user_id: int):
+            """Verifica status do pagamento"""
+            if user_id not in self.pending_payments:
+                await query.edit_message_text(
+                    "❌ Nenhum pagamento pendente encontrado.",
+                    reply_markup=StoreKeyboards.back_main()
+                )
+                return
+            
+            payment_info = self.pending_payments[user_id]
+            
+            if self.payment_system:
+                # Verifica status no Mercado Pago
+                status = self.payment_system.check_payment_status(payment_info["mp_payment_id"])
+                
+                if status["success"] and status["status"] == "approved":
+                    # Pagamento aprovado
+                    await self.process_approved_payment(user_id, payment_info["amount"])
+                    
+                    del self.pending_payments[user_id]
+                    
+                    await query.edit_message_text(
+                        f"✅ **Pagamento aprovado!**\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
+                        reply_markup=StoreKeyboards.back_main(),
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                else:
+                    await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
+            else:
+                await query.answer("💰 Aguarde aprovação manual do pagamento.", show_alert=True)
+        
+        async def process_approved_payment(self, user_id: int, amount: float):
+            """Processa pagamento aprovado"""
+            # Adiciona saldo
+            self.db.update_user_balance(user_id, amount, "add")
+            
+            # Marca transação como completa
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE transactions SET status = "completed", completed_date = CURRENT_TIMESTAMP WHERE user_id = ? AND amount = ? AND status = "pending" ORDER BY created_date DESC LIMIT 1',
+                (user_id, amount)
+            )
+            conn.commit()
+            conn.close()
+            
+            # Envia notificação de recarga para o canal
+            user_info = self.db.get_user(user_id)
+            await self.notification_system.send_recharge_notification(
+                user_info, 
+                amount, 
+                "PIX Automático" if self.payment_system else "PIX Manual"
+            )
+            
+            # Processa pontos de afiliado
+            await self.process_affiliate_points(user_id, amount)
+        
+        async def process_affiliate_points(self, user_id: int, amount: float):
         """Processa pontos de afiliado para quem indicou"""
         if not settings.AFFILIATE_SYSTEM_ENABLED:
             return

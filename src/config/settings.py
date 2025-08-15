@@ -23,6 +23,9 @@ class Settings:
     SEPARATOR = os.getenv('SEPARATOR', '===')
     LOG_DESTINATION = os.getenv('LOG_DESTINATION', '')
     
+    # Sales Channel
+    SALES_CHANNEL_ID = os.getenv('SALES_CHANNEL_ID', '')
+    
     # Payment Settings
     MIN_DEPOSIT = float(os.getenv('MIN_DEPOSIT', 1.00))
     MAX_DEPOSIT = float(os.getenv('MAX_DEPOSIT', 1000.00))

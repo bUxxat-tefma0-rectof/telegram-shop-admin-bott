@@ -538,9 +538,432 @@ Para abastecer mais de um login, envie desta mesma maneira um abaixo do outro, o
             parse_mode=ParseMode.MARKDOWN
         )
     
-    # Implementar métodos restantes conforme necessário...
-    
-    async def back_to_main_menu(self, query, context):
+            async def show_admin_management(self, query, context):
+            """Mostra painel de gestão de admins"""
+            admin_list = self.db.get_setting("admin_list") or ""
+            admin_count = len([x for x in admin_list.split(",") if x])
+            
+            admin_text = f"""🅰️ **PAINEL CONFIGURAR ADMIN**
+👮 **Administradores:** {admin_count}
+
+Use os botões abaixo para fazer as alterações necessárias"""
+            
+            await query.edit_message_text(
+                admin_text,
+                reply_markup=AdminKeyboards.admin_management(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_affiliate_config(self, query, context):
+            """Mostra configuração de afiliados"""
+            min_points = self.db.get_setting("min_points_to_convert") or settings.MIN_POINTS_TO_CONVERT
+            multiplier = self.db.get_setting("points_multiplier") or settings.POINTS_MULTIPLIER
+            points_per_recharge = self.db.get_setting("points_per_recharge") or settings.POINTS_PER_RECHARGE
+            system_enabled = self.db.get_setting("affiliate_system_enabled") == "true"
+            
+            status_text = "ON" if system_enabled else "OFF"
+            status_color = "🟢" if system_enabled else "🔴"
+            
+            config_text = f"""🔻 **PONTOS MÍNIMO PARA SALDO:** {min_points} 
+✖️ **MULTIPLICADOR:** {multiplier}
+
+👥 **SISTEMA DE INDICAÇÃO**
+
+Ao clicar, altera o status do sistema de indicação. Se tiver OFF os usuários não poderão trocar seus pontos por saldo.
+VERDE = On
+VERMELHO = Off
+
+{status_color} **STATUS:** {status_text}
+
+🗞️ **PONTOS POR RECARGA**
+Essa é a quantidade de pontos que o usuário ganha cada vez que o seu afiliado fizer uma recarga.
+
+🔻 **PONTOS MÍNIMO PARA CONVERTER**
+Isso é a quantidade mínima de pontos que o usuário precisa para converter seus pontos em saldo.
+
+✖️ **MULTIPLICADOR PARA CONVERTER**
+Isso é o multiplicador de pontos para saldo na hora de converter.
+EX: Se o multiplicador for {multiplier} e o usuário tiver 40 pontos, quando ele converter ele ficará com R$ {40 * float(multiplier):.2f} de saldo."""
+            
+            await query.edit_message_text(
+                config_text,
+                reply_markup=AdminKeyboards.affiliate_config(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_user_config(self, query, context):
+            """Mostra configuração de usuários"""
+            bonus = self.db.get_setting("registration_bonus") or settings.REGISTRATION_BONUS
+            
+            config_text = f"""📭 **TRANSMITIR A TODOS**
+Após clicar, envie o texto que quer transmitir ou a foto. Para enviar uma foto com texto, basta colocar o texto na legenda da imagem. 📸🖌️
+
+🔎 **PESQUISAR USUÁRIO**
+Se este usuário estiver registrado no bot, vai abrir as configurações de edição desse usuário. 💼🔧
+Você poderá editar o saldo, ver o histórico de compras, e todas as informações dele. 📈📔
+
+🎁 **BÔNUS DE REGISTRO**
+Bônus atual: R$ {bonus}
+Bônus de registro é o valor que cada usuário novo ganhará apenas por se registrar, é um bônus de boas-vindas.
+Para não dar bônus nenhum, deixe em 0"""
+            
+            await query.edit_message_text(
+                config_text,
+                reply_markup=AdminKeyboards.user_config(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_pix_config(self, query, context):
+            """Mostra configuração PIX"""
+            mp_token = self.db.get_setting("mercado_pago_token") or "Não configurado"
+            min_deposit = self.db.get_setting("min_deposit") or settings.MIN_DEPOSIT
+            max_deposit = self.db.get_setting("max_deposit") or settings.MAX_DEPOSIT
+            expiration = self.db.get_setting("pix_expiration_time") or settings.PIX_EXPIRATION_TIME
+            bonus = self.db.get_setting("deposit_bonus") or settings.DEPOSIT_BONUS
+            min_bonus = self.db.get_setting("min_deposit_for_bonus") or settings.MIN_DEPOSIT_FOR_BONUS
+            
+            config_text = f"""🔑 **TOKEN MERCADO PAGO:** {mp_token[:20]}... (configurado)
+
+🔻**DEPÓSITO MÍNIMO:** R$ {min_deposit}
+❗️ **DEPÓSITO MÁXIMO:** R$ {max_deposit}
+⏰ **TEMPO DE EXPIRAÇÃO:** {expiration} minutos
+🔶 **BÔNUS DE DEPÓSITO:** {bonus}%
+🔷 **DEPÓSITO MÍNIMO PARA GANHAR O BÔNUS:** R$ {min_bonus}"""
+            
+            await query.edit_message_text(
+                config_text,
+                reply_markup=AdminKeyboards.pix_config(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_login_config(self, query, context):
+            """Mostra configuração de logins"""
+            # Conta total de logins em estoque
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM login_stock WHERE is_sold = 0')
+            total_stock = cursor.fetchone()[0]
+            conn.close()
+            
+            config_text = f"""📦 **LOGINS NO ESTOQUE:** {total_stock}
+
+📮 **ADICIONAR LOGINS**
+Após apertar vai solicitar os logins que você deseja abastecer, eles devem ser enviados no formato:
+NOME===VALOR===DESCRICAO===EMAIL===SENHA===DURACAO
+
+Para abastecer mais de um login basta enviar desta mesma maneira um abaixo do outro, ou pulando linhas, você pode pular quantas linhas quiser de um login para outro.
+
+🥾 **REMOVER LOGIN**
+Após clicado basta enviar o serviço e o email, separados por ===
+Ex: NETFLIX===EMAIL
+
+❌ **REMOVER POR PLATAFORMA**
+Após clicado, basta enviar o nome da plataforma, automaticamente todos os logins serão removidos.
+
+🗑️ **ZERAR ESTOQUE**
+Após clicar, todos os logins abastecidos serão removidos.
+
+💸 **MUDAR VALOR DO SERVIÇO**
+Após clicar, envie o nome do serviço e o valor, separados por ===.
+EX: SERVICO===VALOR
+
+🪪 **MUDAR VALOR DE TODOS**
+Após clicar, envie o valor, e todos os serviços abastecidos terão seus valores alterados. (útil para queima de estoque)"""
+            
+            await query.edit_message_text(
+                config_text,
+                reply_markup=AdminKeyboards.login_config(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_search_config(self, query, context):
+            """Mostra configuração de pesquisa"""
+            # Conta imagens salvas
+            conn = self.db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM search_images')
+            image_count = cursor.fetchone()[0]
+            conn.close()
+            
+            config_text = f"""🔎 **PAINEL DE CONFIGURAÇÃO DA PESQUISA DE SERVIÇOS**
+📸 **IMAGENS SALVAS:** {image_count}"""
+            
+            await query.edit_message_text(
+                config_text,
+                reply_markup=AdminKeyboards.search_config(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def restart_bot(self, query, context):
+            """Reinicia o bot"""
+            await query.edit_message_text(
+                "🤖 Bot será reiniciado em breve...",
+                reply_markup=AdminKeyboards.back_keyboard("config_general")
+            )
+            # Aqui você pode implementar lógica de reinicialização se necessário
+        
+        async def toggle_affiliate_system(self, query, context):
+            """Alterna sistema de afiliados"""
+            current = self.db.get_setting("affiliate_system_enabled") == "true"
+            new_status = not current
+            
+            self.db.set_setting("affiliate_system_enabled", str(new_status).lower())
+            
+            status_text = "ativado" if new_status else "desativado"
+            await query.edit_message_text(
+                f"✅ Sistema de afiliados {status_text}!",
+                reply_markup=AdminKeyboards.back_keyboard("config_affiliates")
+            )
+        
+        async def request_points_per_recharge(self, query, context):
+            """Solicita pontos por recarga"""
+            self.user_states[query.from_user.id] = WAITING_POINTS_RECHARGE
+            await query.edit_message_text(
+                "🗞️ Digite a quantidade de pontos por recarga:",
+                reply_markup=AdminKeyboards.back_keyboard("config_affiliates")
+            )
+        
+        async def request_min_points(self, query, context):
+            """Solicita pontos mínimos"""
+            self.user_states[query.from_user.id] = WAITING_MIN_POINTS
+            await query.edit_message_text(
+                "🔻 Digite o mínimo de pontos para converter:",
+                reply_markup=AdminKeyboards.back_keyboard("config_affiliates")
+            )
+        
+        async def request_multiplier(self, query, context):
+            """Solicita multiplicador"""
+            self.user_states[query.from_user.id] = WAITING_MULTIPLIER
+            await query.edit_message_text(
+                "✖️ Digite o multiplicador (ex: 0.01):",
+                reply_markup=AdminKeyboards.back_keyboard("config_affiliates")
+            )
+        
+        async def request_registration_bonus(self, query, context):
+            """Solicita bônus de registro"""
+            self.user_states[query.from_user.id] = WAITING_REGISTRATION_BONUS
+            await query.edit_message_text(
+                "🎁 Digite o bônus de registro em R$:",
+                reply_markup=AdminKeyboards.back_keyboard("config_users")
+            )
+        
+        async def request_user_search(self, query, context):
+            """Solicita ID do usuário para buscar"""
+            self.user_states[query.from_user.id] = WAITING_USER_SEARCH
+            await query.edit_message_text(
+                "🔎 Digite o ID do usuário:",
+                reply_markup=AdminKeyboards.back_keyboard("config_users")
+            )
+        
+        async def request_log_dest_change(self, query, context):
+            """Solicita novo destino de logs"""
+            self.user_states[query.from_user.id] = WAITING_LOG_DEST
+            await query.edit_message_text(
+                "📭 Digite o novo destino de logs (chat ID):",
+                reply_markup=AdminKeyboards.back_keyboard("config_general")
+            )
+        
+        async def request_admin_remove(self, query, context):
+            """Solicita ID do admin para remover"""
+            self.user_states[query.from_user.id] = WAITING_ADMIN_REMOVE
+            await query.edit_message_text(
+                "🚮 Digite o ID do administrador para remover:",
+                reply_markup=AdminKeyboards.back_keyboard("config_admins")
+            )
+        
+        async def list_admins(self, query, context):
+            """Lista administradores"""
+            admin_list = self.db.get_setting("admin_list") or ""
+            
+            if not admin_list:
+                admin_text = "📋 **LISTA DE ADMINISTRADORES**\n\nNenhum administrador cadastrado."
+            else:
+                admin_ids = [x for x in admin_list.split(",") if x]
+                admin_text = "📋 **LISTA DE ADMINISTRADORES**\n\n"
+                
+                for i, admin_id in enumerate(admin_ids, 1):
+                    user = self.db.get_user(int(admin_id))
+                    name = user['first_name'] if user else 'Usuário'
+                    admin_text += f"{i}. {name} (ID: {admin_id})\n"
+            
+            await query.edit_message_text(
+                admin_text,
+                reply_markup=AdminKeyboards.back_keyboard("config_admins"),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def clear_stock(self, query, context):
+            """Zera todo o estoque"""
+            await query.edit_message_text(
+                "⚠️ **ATENÇÃO!**\n\nTem certeza que deseja zerar TODO o estoque? Esta ação não pode ser desfeita!",
+                reply_markup=AdminKeyboards.confirmation_keyboard("clear_stock")
+            )
+        
+        async def show_admin_profile(self, query, context):
+            """Mostra perfil do admin"""
+            user = self.db.get_user(query.from_user.id)
+            
+            profile_text = f"""👤 **PERFIL ADMINISTRATIVO**
+
+🆔 **ID:** {user['user_id']}
+👤 **Nome:** {user['first_name'] or 'N/A'}
+💰 **Saldo:** R$ {user['balance']:.2f}
+🛒 **Compras:** {user['total_purchases']}
+📅 **Registro:** {user['registration_date']}
+⏰ **Última atividade:** {user['last_activity']}"""
+            
+            await query.edit_message_text(
+                profile_text,
+                reply_markup=AdminKeyboards.back_keyboard("admin_back_main"),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def show_admin_search(self, query, context):
+            """Mostra opções de pesquisa admin"""
+            await query.edit_message_text(
+                "🔍 **PESQUISA ADMINISTRATIVA**\n\nFuncionalidade de pesquisa disponível.",
+                reply_markup=AdminKeyboards.back_keyboard("admin_back_main"),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def request_add_balance(self, query, context):
+            """Solicita valor para adicionar saldo"""
+            self.user_states[query.from_user.id] = WAITING_ADD_BALANCE
+            await query.edit_message_text(
+                "💰 Digite o valor para adicionar ao seu saldo:",
+                reply_markup=AdminKeyboards.back_keyboard("admin_back_main")
+            )
+        
+        async def process_admin_purchase(self, query, context, product_id: int):
+            """Processa compra do admin (grátis)"""
+            products = self.db.get_products()
+            product = next((p for p in products if p['id'] == product_id), None)
+            
+            if not product:
+                await query.edit_message_text("❌ Produto não encontrado.")
+                return
+            
+            # Busca login disponível
+            login = self.db.get_available_login(product_id)
+            if not login:
+                await query.edit_message_text(
+                    "❌ Nenhum login disponível.",
+                    reply_markup=AdminKeyboards.back_keyboard("admin_logins")
+                )
+                return
+            
+            # Marca como vendido (admin não paga)
+            self.db.mark_login_as_sold(login['id'], query.from_user.id)
+            
+            success_text = f"""✅ **LOGIN OBTIDO (ADMIN)**
+
+**Produto:** {product['name']}
+📧 **E-mail:** `{login['email']}`
+🔐 **Senha:** `{login['password']}`
+
+{login['additional_info'] if login['additional_info'] else ''}
+
+**Validade:** {product['duration']} dias"""
+            
+            await query.edit_message_text(
+                success_text,
+                reply_markup=AdminKeyboards.back_keyboard("admin_logins"),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        
+        async def set_pix_mode(self, query, context, mode: str):
+            """Define modo PIX"""
+            self.db.set_setting("pix_mode", mode)
+            mode_text = "automático" if mode == "auto" else "manual"
+            
+            await query.edit_message_text(
+                f"✅ PIX {mode_text} ativado!",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_mp_token(self, query, context):
+            """Solicita token Mercado Pago"""
+            self.user_states[query.from_user.id] = WAITING_MP_TOKEN
+            await query.edit_message_text(
+                "🔑 Digite o token do Mercado Pago:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_min_deposit(self, query, context):
+            """Solicita depósito mínimo"""
+            self.user_states[query.from_user.id] = WAITING_MIN_DEPOSIT
+            await query.edit_message_text(
+                "🔻 Digite o valor mínimo de depósito:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_max_deposit(self, query, context):
+            """Solicita depósito máximo"""
+            self.user_states[query.from_user.id] = WAITING_MAX_DEPOSIT
+            await query.edit_message_text(
+                "❗️ Digite o valor máximo de depósito:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_expiration_time(self, query, context):
+            """Solicita tempo de expiração"""
+            self.user_states[query.from_user.id] = WAITING_EXPIRATION_TIME
+            await query.edit_message_text(
+                "⏰ Digite o tempo de expiração em minutos:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_deposit_bonus(self, query, context):
+            """Solicita bônus de depósito"""
+            self.user_states[query.from_user.id] = WAITING_DEPOSIT_BONUS
+            await query.edit_message_text(
+                "🔶 Digite a porcentagem de bônus:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_min_for_bonus(self, query, context):
+            """Solicita valor mínimo para bônus"""
+            self.user_states[query.from_user.id] = WAITING_MIN_FOR_BONUS
+            await query.edit_message_text(
+                "🔷 Digite o valor mínimo para ganhar bônus:",
+                reply_markup=AdminKeyboards.back_keyboard("config_pix")
+            )
+        
+        async def request_remove_login(self, query, context):
+            """Solicita dados para remover login"""
+            self.user_states[query.from_user.id] = WAITING_REMOVE_LOGIN
+            separator = self.db.get_setting("separator") or settings.SEPARATOR
+            await query.edit_message_text(
+                f"🥾 Digite o serviço e email separados por {separator}:\nEx: NETFLIX{separator}email@exemplo.com",
+                reply_markup=AdminKeyboards.back_keyboard("config_logins")
+            )
+        
+        async def request_platform_remove(self, query, context):
+            """Solicita plataforma para remover"""
+            self.user_states[query.from_user.id] = WAITING_PLATFORM_REMOVE
+            await query.edit_message_text(
+                "❌ Digite o nome da plataforma para remover todos os logins:",
+                reply_markup=AdminKeyboards.back_keyboard("config_logins")
+            )
+        
+        async def request_service_price(self, query, context):
+            """Solicita mudança de preço de serviço"""
+            self.user_states[query.from_user.id] = WAITING_SERVICE_PRICE
+            separator = self.db.get_setting("separator") or settings.SEPARATOR
+            await query.edit_message_text(
+                f"💸 Digite o serviço e novo preço separados por {separator}:\nEx: NETFLIX{separator}15.50",
+                reply_markup=AdminKeyboards.back_keyboard("config_logins")
+            )
+        
+        async def request_all_prices(self, query, context):
+            """Solicita novo preço para todos"""
+            self.user_states[query.from_user.id] = WAITING_ALL_PRICES
+            await query.edit_message_text(
+                "🪪 Digite o novo preço para TODOS os serviços:",
+                reply_markup=AdminKeyboards.back_keyboard("config_logins")
+            )
+        
+        async def back_to_main_menu(self, query, context):
         """Volta ao menu principal"""
         user = self.db.get_user(query.from_user.id)
         affiliate_stats = self.db.get_affiliate_stats(query.from_user.id)
