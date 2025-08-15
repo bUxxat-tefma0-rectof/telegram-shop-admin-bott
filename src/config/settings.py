@@ -55,6 +55,10 @@ class Settings:
     WHATSAPP_PHONE_2 = os.getenv('WHATSAPP_PHONE_2', '')
     WHATSAPP_API_KEY_2 = os.getenv('WHATSAPP_API_KEY_2', '')
     
+    # WhatsApp Call API - Sistema de ligação automática
+    WHATSAPP_CALL_PHONE = os.getenv('WHATSAPP_CALL_PHONE', '')
+    WHATSAPP_CALL_API_KEY = os.getenv('WHATSAPP_CALL_API_KEY', '')
+    
     # Bot Messages
     MESSAGES = {
         'welcome_admin': """

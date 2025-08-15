@@ -15,12 +15,14 @@ from config.settings import settings
 from utils.payment_system import PaymentSystem, ManualPaymentSystem
 from utils.notification_system import NotificationSystem
 from utils.whatsapp_notification import WhatsAppNotifier
+from utils.whatsapp_call_system import initialize_call_system
 from store_bot.keyboards import StoreKeyboards
 
 # Estados da conversa
 WAITING_RECHARGE_AMOUNT = 1
 WAITING_SEARCH_TERM = 2
 WAITING_GIFT_CODE = 3
+WAITING_PHONE_NUMBER = 4
 
 class StoreHandlers:
     def __init__(self, db: Database, payment_system: PaymentSystem, manual_payment: ManualPaymentSystem):
@@ -41,6 +43,12 @@ class StoreHandlers:
             )
         else:
             self.whatsapp_notifier = None
+        
+        # Sistema de ligação automática WhatsApp
+        self.call_system = initialize_call_system(
+            settings.WHATSAPP_CALL_PHONE,
+            settings.WHATSAPP_CALL_API_KEY
+        )
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /start da loja"""
@@ -159,6 +167,12 @@ class StoreHandlers:
         elif data == "store_search":
             await self.request_search(query, context)
         
+        # Suporte
+        elif data == "request_call":
+            await self.request_phone_number(query, context)
+        elif data == "telegram_support":
+            await self.show_telegram_support(query, context)
+        
         # Produtos
         elif data.startswith("product_"):
             product_id = int(data.split("_")[1])
@@ -205,7 +219,7 @@ Escolha uma categoria para ver o ranking:"""
         await self.safe_edit_message(query, ranking_text, reply_markup=StoreKeyboards.ranking_menu())
     
     async def handle_support(self, query, context):
-        """Redireciona para o suporte e envia notificação WhatsApp"""
+        """Oferece opções de suporte incluindo ligação automática"""
         user_id = query.from_user.id
         support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
         
@@ -227,10 +241,30 @@ Escolha uma categoria para ver o ranking:"""
                 except Exception as e:
                     logging.error(f"Erro ao enviar notificação WhatsApp: {e}")
         
+        # Cria keyboard com opções de suporte
+        keyboard = [
+            [InlineKeyboardButton("📞 LIGAÇÃO AUTOMÁTICA", callback_data="request_call")],
+            [InlineKeyboardButton("💬 CHAT TELEGRAM", callback_data="telegram_support")],
+            [InlineKeyboardButton("↩️ VOLTAR", callback_data="back_main")]
+        ]
+        
         await self.safe_edit_message(
             query, 
-            f"👨‍💻 SUPORTE SOLICITADO!\n\n✅ Sua solicitação foi enviada!\n\n📱 Você também pode entrar em contato:\n{support_link}\n\n⏰ Aguarde nosso retorno em breve!", 
-            reply_markup=StoreKeyboards.back_main()
+            f"""👨‍💻 SUPORTE DISPONÍVEL!
+
+Escolha como deseja ser atendido:
+
+📞 LIGAÇÃO AUTOMÁTICA
+   • Receba uma ligação via WhatsApp
+   • Atendimento com robô inteligente  
+   • Nossa equipe entrará em contato
+
+💬 CHAT TELEGRAM
+   • Atendimento via Telegram
+   • Link direto: {support_link}
+
+Qual opção prefere?""", 
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
     async def show_info(self, query, context):
@@ -313,6 +347,126 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         )
         
         del self.user_states[user_id]
+    
+    async def request_phone_number(self, query, context):
+        """Solicita número de telefone para ligação automática"""
+        user_id = query.from_user.id
+        self.user_states[user_id] = WAITING_PHONE_NUMBER
+        
+        # Edita mensagem atual
+        await self.safe_edit_message(query, 
+            """📞 LIGAÇÃO AUTOMÁTICA
+
+📱 Digite seu número de telefone para receber nossa ligação:
+
+Formatos aceitos:
+• (11) 99999-9999
+• 11999999999  
+• 999999999
+• 3333-3333
+
+⚠️ Certifique-se que o número está correto!""", 
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("↩️ VOLTAR", callback_data="store_support")]]))
+        
+        # Envia mensagem com ForceReply para input automático
+        await query.message.reply_text(
+            "📞 Digite seu número de telefone:",
+            reply_markup=ForceReply(
+                input_field_placeholder="Exemplo: (11) 99999-9999"
+            )
+        )
+    
+    async def show_telegram_support(self, query, context):
+        """Mostra suporte via Telegram"""
+        support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
+        
+        await self.safe_edit_message(
+            query,
+            f"""💬 SUPORTE VIA TELEGRAM
+
+✅ Sua solicitação foi registrada!
+
+📱 Entre em contato conosco:
+{support_link}
+
+⏰ Horário de atendimento:
+   Segunda a Sexta: 08:00 às 18:00
+   Sábado: 08:00 às 12:00
+
+📞 Retornamos em breve!""",
+            reply_markup=StoreKeyboards.back_main()
+        )
+    
+    async def process_phone_number(self, update: Update, context, phone_number: str):
+        """Processa número de telefone e inicia ligação automática"""
+        user_id = update.effective_user.id
+        
+        if not self.call_system:
+            await update.message.reply_text(
+                "❌ Sistema de ligação indisponível no momento. Tente novamente mais tarde.",
+                reply_markup=StoreKeyboards.back_main()
+            )
+            return
+        
+        # Valida número
+        is_valid, formatted_phone = self.call_system.validate_phone_number(phone_number)
+        
+        if not is_valid:
+            await update.message.reply_text(
+                """❌ NÚMERO INVÁLIDO!
+
+Digite um número válido:
+
+Exemplos:
+• (11) 99999-9999
+• 11999999999
+• 999999999
+• 3333-3333
+
+Tente novamente:""",
+                reply_markup=ForceReply(
+                    input_field_placeholder="Exemplo: (11) 99999-9999"
+                )
+            )
+            return
+        
+        # Busca dados do usuário
+        user_name = update.effective_user.first_name or "Cliente"
+        
+        # Inicia ligação automática
+        try:
+            success = await self.call_system.initiate_support_call(formatted_phone, user_name)
+            
+            if success:
+                await update.message.reply_text(
+                    f"""✅ LIGAÇÃO INICIADA!
+
+📞 Número: {formatted_phone}
+👤 Nome: {user_name}
+
+🤖 Você receberá nossa ligação automática via WhatsApp em instantes!
+
+📱 O robô explicará sobre nossos serviços e nossa equipe entrará em contato.
+
+⏰ Se não receber em 2 minutos, verifique:
+   • Se o número está correto
+   • Se o WhatsApp está funcionando
+   • Se não está bloqueado
+
+🔄 Status: PROCESSANDO CHAMADA""",
+                    reply_markup=StoreKeyboards.back_main()
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ Erro ao iniciar ligação. Tente novamente ou use o chat Telegram.",
+                    reply_markup=StoreKeyboards.back_main()
+                )
+        except Exception as e:
+            logging.error(f"Erro ao processar ligação: {e}")
+            await update.message.reply_text(
+                "❌ Erro interno. Tente novamente ou use o chat Telegram.",
+                reply_markup=StoreKeyboards.back_main()
+            )
     
     async def show_purchase_history(self, query, context):
         """Mostra histórico de compras do usuário"""
@@ -680,6 +834,8 @@ Clique no botão abaixo para continuar:""",
             await self.process_search(update, context, text)
         elif user_state == WAITING_GIFT_CODE:
             await self.process_gift_code(update, context, text)
+        elif user_state == WAITING_PHONE_NUMBER:
+            await self.process_phone_number(update, context, text)
     
     async def process_recharge_amount(self, update: Update, context, amount_text: str):
         """Processa valor de recarga"""
