@@ -512,6 +512,9 @@ Confirma a compra?"""
             if new_stock <= 5:
                 await self.notification_system.send_stock_alert(product['name'], new_stock)
             
+            # Instrução de uso baseada no produto
+            instructions = self.get_product_instructions(product['name'])
+            
             # Monta mensagem de sucesso
             success_text = f"""✅ **COMPRA REALIZADA COM SUCESSO!**
 
@@ -520,6 +523,9 @@ Confirma a compra?"""
 
 📧 **E-mail:** `{login['email']}`
 🔐 **Senha:** `{login['password']}`
+
+📖 **INSTRUÇÕES DE USO:**
+{instructions}
 
 {login['additional_info'] if login['additional_info'] else ''}
 
@@ -775,64 +781,64 @@ Obrigado pela compra! 🎉"""
             parse_mode=ParseMode.MARKDOWN
         )
     
-            async def check_payment_status(self, query, context, user_id: int):
-            """Verifica status do pagamento"""
-            if user_id not in self.pending_payments:
-                await query.edit_message_text(
-                    "❌ Nenhum pagamento pendente encontrado.",
-                    reply_markup=StoreKeyboards.back_main()
-                )
-                return
+    async def check_payment_status(self, query, context, user_id: int):
+        """Verifica status do pagamento"""
+        if user_id not in self.pending_payments:
+            await query.edit_message_text(
+                "❌ Nenhum pagamento pendente encontrado.",
+                reply_markup=StoreKeyboards.back_main()
+            )
+            return
+        
+        payment_info = self.pending_payments[user_id]
+        
+        if self.payment_system:
+            # Verifica status no Mercado Pago
+            status = self.payment_system.check_payment_status(payment_info["mp_payment_id"])
             
-            payment_info = self.pending_payments[user_id]
-            
-            if self.payment_system:
-                # Verifica status no Mercado Pago
-                status = self.payment_system.check_payment_status(payment_info["mp_payment_id"])
+            if status["success"] and status["status"] == "approved":
+                # Pagamento aprovado
+                await self.process_approved_payment(user_id, payment_info["amount"])
                 
-                if status["success"] and status["status"] == "approved":
-                    # Pagamento aprovado
-                    await self.process_approved_payment(user_id, payment_info["amount"])
-                    
-                    del self.pending_payments[user_id]
-                    
-                    await query.edit_message_text(
-                        f"✅ **Pagamento aprovado!**\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
-                        reply_markup=StoreKeyboards.back_main(),
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                else:
-                    await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
+                del self.pending_payments[user_id]
+                
+                await query.edit_message_text(
+                    f"✅ **Pagamento aprovado!**\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
+                    reply_markup=StoreKeyboards.back_main(),
+                    parse_mode=ParseMode.MARKDOWN
+                )
             else:
-                await query.answer("💰 Aguarde aprovação manual do pagamento.", show_alert=True)
+                await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
+        else:
+            await query.answer("💰 Aguarde aprovação manual do pagamento.", show_alert=True)
+    
+    async def process_approved_payment(self, user_id: int, amount: float):
+        """Processa pagamento aprovado"""
+        # Adiciona saldo
+        self.db.update_user_balance(user_id, amount, "add")
         
-        async def process_approved_payment(self, user_id: int, amount: float):
-            """Processa pagamento aprovado"""
-            # Adiciona saldo
-            self.db.update_user_balance(user_id, amount, "add")
-            
-            # Marca transação como completa
-            conn = self.db.get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                'UPDATE transactions SET status = "completed", completed_date = CURRENT_TIMESTAMP WHERE user_id = ? AND amount = ? AND status = "pending" ORDER BY created_date DESC LIMIT 1',
-                (user_id, amount)
-            )
-            conn.commit()
-            conn.close()
-            
-            # Envia notificação de recarga para o canal
-            user_info = self.db.get_user(user_id)
-            await self.notification_system.send_recharge_notification(
-                user_info, 
-                amount, 
-                "PIX Automático" if self.payment_system else "PIX Manual"
-            )
-            
-            # Processa pontos de afiliado
-            await self.process_affiliate_points(user_id, amount)
+        # Marca transação como completa
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE transactions SET status = "completed", completed_date = CURRENT_TIMESTAMP WHERE user_id = ? AND amount = ? AND status = "pending" ORDER BY created_date DESC LIMIT 1',
+            (user_id, amount)
+        )
+        conn.commit()
+        conn.close()
         
-        async def process_affiliate_points(self, user_id: int, amount: float):
+        # Envia notificação de recarga para o canal
+        user_info = self.db.get_user(user_id)
+        await self.notification_system.send_recharge_notification(
+            user_info, 
+            amount, 
+            "PIX Automático" if self.payment_system else "PIX Manual"
+        )
+        
+        # Processa pontos de afiliado
+        await self.process_affiliate_points(user_id, amount)
+        
+    async def process_affiliate_points(self, user_id: int, amount: float):
         """Processa pontos de afiliado para quem indicou"""
         if not settings.AFFILIATE_SYSTEM_ENABLED:
             return
@@ -910,3 +916,114 @@ Indique mais e aumente seus ganhos!"""
             reply_markup=StoreKeyboards.affiliate_menu(),
             parse_mode=ParseMode.MARKDOWN
         )
+    
+    def get_product_instructions(self, product_name: str) -> str:
+        """Retorna instruções de uso automáticas baseadas no produto"""
+        product_lower = product_name.lower()
+        
+        if 'netflix' in product_lower:
+            return """1. Acesse netflix.com
+2. Clique em "Entrar"
+3. Digite o e-mail e senha fornecidos
+4. Selecione o perfil desejado
+5. Aproveite o conteúdo premium!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• NÃO adicione cartão próprio
+• NÃO mude senha ou e-mail
+• Use apenas para assistir"""
+        
+        elif 'spotify' in product_lower:
+            return """1. Acesse spotify.com
+2. Clique em "Entrar" 
+3. Digite o e-mail e senha fornecidos
+4. Aproveite a música premium sem anúncios!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• NÃO adicione forma de pagamento
+• Download offline disponível"""
+        
+        elif 'disney' in product_lower:
+            return """1. Acesse disneyplus.com
+2. Clique em "Entrar"
+3. Digite o e-mail e senha fornecidos
+4. Crie seu perfil personalizado
+5. Aproveite Disney, Marvel, Star Wars!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• Até 4 perfis simultâneos"""
+        
+        elif 'amazon' in product_lower or 'prime' in product_lower:
+            return """1. Acesse primevideo.com
+2. Clique em "Entrar"
+3. Digite o e-mail e senha fornecidos
+4. Aproveite filmes e séries originais!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• NÃO use para compras na Amazon
+• Apenas para Prime Video"""
+        
+        elif 'globoplay' in product_lower:
+            return """1. Acesse globoplay.globo.com
+2. Clique em "Entrar"
+3. Digite o e-mail e senha fornecidos
+4. Assista novelas, séries e esportes!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• Conteúdo ao vivo disponível"""
+        
+        elif 'youtube' in product_lower:
+            return """1. Acesse youtube.com
+2. Clique no perfil (canto superior direito)
+3. Digite o e-mail e senha fornecidos
+4. Aproveite sem anúncios e com download!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• YouTube Music incluso"""
+        
+        elif 'crunchyroll' in product_lower:
+            return """1. Acesse crunchyroll.com
+2. Clique em "Log In"
+3. Digite o e-mail e senha fornecidos
+4. Assista animes em HD sem anúncios!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• Legendas e dublagens disponíveis"""
+        
+        elif 'chatgpt' in product_lower:
+            return """1. Acesse chat.openai.com
+2. Clique em "Log In"
+3. Digite o e-mail e senha fornecidos
+4. Use ChatGPT Plus ilimitado!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• GPT-4 disponível"""
+        
+        elif 'free fire' in product_lower:
+            return """1. Abra Free Fire
+2. Faça login com Facebook/Google
+3. Use as informações fornecidas
+4. Aproveite skins e diamantes!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• NÃO vincule outros métodos"""
+        
+        else:
+            return """1. Acesse o site oficial do serviço
+2. Faça login com os dados fornecidos
+3. Aproveite o conteúdo premium!
+
+⚠️ **IMPORTANTE:**
+• NÃO altere dados da conta
+• NÃO adicione formas de pagamento
+• Use apenas para consumo do conteúdo
+• Em caso de dúvidas, entre em contato"""

@@ -25,6 +25,8 @@ class Settings:
     
     # Sales Channel
     SALES_CHANNEL_ID = os.getenv('SALES_CHANNEL_ID', '')
+    if SALES_CHANNEL_ID and not SALES_CHANNEL_ID.startswith('-'):
+        SALES_CHANNEL_ID = f'-{SALES_CHANNEL_ID}'
     
     # Payment Settings
     MIN_DEPOSIT = float(os.getenv('MIN_DEPOSIT', 1.00))

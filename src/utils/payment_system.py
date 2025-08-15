@@ -1,66 +1,29 @@
-import mercadopago
 import uuid
-import qrcode
-import io
-import base64
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List
-from PIL import Image
 
 class PaymentSystem:
     def __init__(self, access_token: str):
-        self.mp = mercadopago.SDK(access_token)
         self.access_token = access_token
+        # Por enquanto, PIX manual até configurar Mercado Pago
     
     def create_pix_payment(self, amount: float, user_id: int, description: str = "Recarga de saldo") -> Dict:
-        """Cria um pagamento PIX"""
+        """Cria um pagamento PIX (modo manual por enquanto)"""
         try:
             # Gera ID único para o pagamento
             payment_id = str(uuid.uuid4())[:8].upper()
             
-            # Dados do pagamento
-            payment_data = {
-                "transaction_amount": float(amount),
-                "description": description,
-                "payment_method_id": "pix",
-                "external_reference": f"user_{user_id}_payment_{payment_id}",
-                "payer": {
-                    "email": f"user{user_id}@exemplo.com"
-                },
-                "notification_url": "https://seu-webhook-url.com/webhook"  # Configure seu webhook
+            # Por enquanto retorna dados simulados para PIX manual
+            return {
+                "success": True,
+                "payment_id": payment_id,
+                "mp_payment_id": f"mock_{payment_id}",
+                "pix_code": f"PIX_CODE_MANUAL_{payment_id}",
+                "amount": amount,
+                "status": "pending_manual",
+                "expiration_date": datetime.now() + timedelta(minutes=30),
+                "expires_in": "30 minutos"
             }
-            
-            # Cria o pagamento
-            payment_response = self.mp.payment().create(payment_data)
-            
-            if payment_response["status"] == 201:
-                payment_info = payment_response["response"]
-                
-                # Extrai informações do PIX
-                pix_data = payment_info.get("point_of_interaction", {}).get("transaction_data", {})
-                qr_code = pix_data.get("qr_code", "")
-                qr_code_base64 = pix_data.get("qr_code_base64", "")
-                
-                # Calcula data de expiração (30 minutos)
-                expiration_date = datetime.now() + timedelta(minutes=30)
-                
-                return {
-                    "success": True,
-                    "payment_id": payment_id,
-                    "mp_payment_id": payment_info["id"],
-                    "pix_code": qr_code,
-                    "qr_code_base64": qr_code_base64,
-                    "amount": amount,
-                    "status": payment_info["status"],
-                    "expiration_date": expiration_date,
-                    "expires_in": "30 minutos"
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "Erro ao criar pagamento",
-                    "details": payment_response
-                }
                 
         except Exception as e:
             return {
@@ -69,26 +32,17 @@ class PaymentSystem:
             }
     
     def check_payment_status(self, mp_payment_id: str) -> Dict:
-        """Verifica o status de um pagamento"""
+        """Verifica o status de um pagamento (modo manual)"""
         try:
-            payment_response = self.mp.payment().get(mp_payment_id)
-            
-            if payment_response["status"] == 200:
-                payment_info = payment_response["response"]
-                
-                return {
-                    "success": True,
-                    "status": payment_info["status"],
-                    "status_detail": payment_info.get("status_detail", ""),
-                    "amount": payment_info["transaction_amount"],
-                    "date_approved": payment_info.get("date_approved"),
-                    "payment_id": payment_info["id"]
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "Pagamento não encontrado"
-                }
+            # Por enquanto retorna status pendente para aprovação manual
+            return {
+                "success": True,
+                "status": "pending_manual",
+                "status_detail": "Aguardando aprovação manual",
+                "amount": 0,
+                "date_approved": None,
+                "payment_id": mp_payment_id
+            }
                 
         except Exception as e:
             return {
@@ -97,27 +51,10 @@ class PaymentSystem:
             }
     
     def generate_qr_code_image(self, pix_code: str) -> bytes:
-        """Gera imagem do QR Code PIX"""
+        """Gera imagem do QR Code PIX (simplificado)"""
         try:
-            # Cria QR Code
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(pix_code)
-            qr.make(fit=True)
-            
-            # Cria imagem
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Converte para bytes
-            img_buffer = io.BytesIO()
-            img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            
-            return img_buffer.getvalue()
+            # Por enquanto retorna None - implementar quando necessário
+            return None
             
         except Exception as e:
             print(f"Erro ao gerar QR Code: {e}")
