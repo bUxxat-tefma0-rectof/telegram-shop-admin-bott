@@ -24,20 +24,32 @@ class WhatsAppCallSystem:
         # Remove todos os caracteres não numéricos
         clean_phone = re.sub(r'[^\d]', '', phone)
         
+        logger.info(f"Validando número: '{phone}' → '{clean_phone}' (len: {len(clean_phone)})")
+        
         # Verifica formatos válidos
-        if len(clean_phone) == 11 and clean_phone.startswith(('11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28', '31', '32', '33', '34', '35', '37', '38', '41', '42', '43', '44', '45', '46', '47', '48', '49', '51', '53', '54', '55', '61', '62', '64', '65', '66', '67', '68', '69', '71', '73', '74', '75', '77', '79', '81', '82', '83', '84', '85', '86', '87', '88', '89', '91', '92', '93', '94', '95', '96', '97', '98', '99')):
-            # 11 dígitos com DDD válido
-            formatted = f"55{clean_phone}"
-            return True, formatted
-        
-        elif len(clean_phone) == 10 and clean_phone.startswith(('11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28', '31', '32', '33', '34', '35', '37', '38', '41', '42', '43', '44', '45', '46', '47', '48', '49', '51', '53', '54', '55', '61', '62', '64', '65', '66', '67', '68', '69', '71', '73', '74', '75', '77', '79', '81', '82', '83', '84', '85', '86', '87', '88', '89', '91', '92', '93', '94', '95', '96', '97', '98', '99')):
-            # 10 dígitos com DDD válido (telefone fixo)
-            formatted = f"55{clean_phone}"
-            return True, formatted
-        
-        elif len(clean_phone) == 13 and clean_phone.startswith('55'):
-            # Já tem código do país
+        if len(clean_phone) == 13 and clean_phone.startswith('55'):
+            # Já tem código do país (formato completo)
             return True, clean_phone
+        
+        elif len(clean_phone) == 12 and clean_phone.startswith('55'):
+            # Com código do país mas sem o 9 (adiciona 9 se necessário)
+            if clean_phone[4] != '9':  # Se não tem o 9 do celular
+                formatted = f"{clean_phone[:4]}9{clean_phone[4:]}"
+                return True, formatted
+            return True, clean_phone
+        
+        elif len(clean_phone) == 11:
+            # 11 dígitos - número completo brasileiro sem código do país
+            formatted = f"55{clean_phone}"
+            return True, formatted
+        
+        elif len(clean_phone) == 10:
+            # 10 dígitos - pode ser celular sem 9 ou fixo
+            # Assume que é celular e adiciona 9
+            ddd = clean_phone[:2]
+            number = clean_phone[2:]
+            formatted = f"55{ddd}9{number}"
+            return True, formatted
         
         elif len(clean_phone) == 9 and clean_phone.startswith('9'):
             # Apenas o número sem DDD (assumir DDD 11 como padrão)
@@ -50,10 +62,13 @@ class WhatsAppCallSystem:
             return True, formatted
         
         else:
+            logger.error(f"Formato de número não reconhecido: {clean_phone}")
             return False, ""
     
     async def initiate_support_call(self, customer_phone: str, customer_name: str = "Cliente") -> bool:
         """Inicia ligação de suporte para o cliente"""
+        
+        logger.info(f"Tentando iniciar ligação para {customer_phone}")
         
         # Valida número do cliente
         is_valid, formatted_phone = self.validate_phone_number(customer_phone)
@@ -61,41 +76,41 @@ class WhatsAppCallSystem:
             logger.error(f"Número inválido para ligação: {customer_phone}")
             return False
         
+        logger.info(f"Número validado: {customer_phone} → {formatted_phone}")
+        
         try:
-            # Mensagem que será "falada" pelo robô via WhatsApp
-            robot_message = f"""🤖 ATENDIMENTO AUTOMÁTICO - SUPORTE
+            # Mensagem simplificada para evitar problemas de encoding
+            robot_message = f"""🤖 SUPORTE AUTOMÁTICO
 
-Olá {customer_name}! 
+Olá {customer_name}!
 
-Esta é uma chamada automática do nosso sistema de suporte.
+Chamada automática do nosso suporte.
 
-📞 Você solicitou atendimento e nossa equipe entrará em contato em breve.
+Nossa equipe entrará em contato em breve.
 
-⏰ Horário de funcionamento:
-   Segunda a Sexta: 08:00 às 18:00
-   Sábado: 08:00 às 12:00
+Horário: Segunda a Sexta 08:00-18:00
 
-📱 Para falar com nosso atendente:
-   Digite: FALAR COM ATENDENTE
-
-🔄 Status: CHAMADA INICIADA
-📱 Número: {formatted_phone}
+Para falar conosco digite: ATENDENTE
 
 Aguarde nosso contato!"""
 
+            logger.info(f"Enviando mensagem para {formatted_phone}")
+            
             # Envia mensagem via WhatsApp que funciona como "ligação"
             success = await self._send_call_message(formatted_phone, robot_message)
             
+            logger.info(f"Resultado do envio: {success}")
+            
             if success:
-                # Notifica administradores sobre a solicitação
-                admin_message = f"""📞 NOVA SOLICITAÇÃO DE LIGAÇÃO!
+                # Notifica administradores sobre a solicitação (mensagem simplificada)
+                admin_message = f"""📞 SOLICITAÇÃO DE LIGAÇÃO
 
-👤 Cliente: {customer_name}
-📱 Número: {formatted_phone}
-⏰ Horário: {self._get_current_time()}
+Cliente: {customer_name}
+Número: {formatted_phone}
+Horário: {self._get_current_time()}
 
-🤖 Robô já enviou mensagem automática.
-📞 Cliente aguarda contato da equipe."""
+Robô enviou mensagem.
+Cliente aguarda contato."""
 
                 # Envia para os admins
                 await self._notify_admins(admin_message)
@@ -103,6 +118,7 @@ Aguarde nosso contato!"""
                 logger.info(f"Ligação iniciada com sucesso para {formatted_phone}")
                 return True
             else:
+                logger.error(f"Falha ao enviar mensagem para {formatted_phone}")
                 return False
                 
         except Exception as e:
@@ -118,14 +134,26 @@ Aguarde nosso contato!"""
             # Monta a URL da API
             url = f"{self.call_url}?phone={phone}&text={encoded_message}&apikey={self.call_api_key}"
             
+            logger.info(f"Enviando para: {phone} com API key: {self.call_api_key}")
+            logger.info(f"URL: {url[:100]}...")  # Log parcial da URL
+            
             # Envia a requisição
             response = requests.get(url, timeout=15)
+            
+            logger.info(f"Status da resposta: {response.status_code}")
             
             if response.status_code == 200:
                 logger.info(f"Mensagem de ligação enviada com sucesso para {phone}")
                 return True
             else:
-                logger.error(f"Erro ao enviar ligação para {phone}: {response.status_code} - {response.text}")
+                logger.error(f"Erro ao enviar ligação para {phone}: {response.status_code}")
+                logger.error(f"Resposta: {response.text[:200]}...")  # Log parcial da resposta
+                
+                # Para APIs CallMeBot, mesmo com erro 203, a mensagem pode ser enviada
+                if response.status_code == 203:
+                    logger.info("Status 203 - mensagem pode ter sido enviada mesmo assim")
+                    return True
+                
                 return False
                 
         except requests.RequestException as e:

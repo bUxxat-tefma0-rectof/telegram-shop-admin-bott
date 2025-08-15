@@ -435,6 +435,15 @@ Tente novamente:""",
         
         # Inicia ligação automática
         try:
+            logging.info(f"Iniciando ligação para {formatted_phone} com nome {user_name}")
+            
+            if not self.call_system:
+                await update.message.reply_text(
+                    "❌ Sistema de ligação não configurado. Entre em contato via Telegram.",
+                    reply_markup=StoreKeyboards.back_main()
+                )
+                return
+            
             success = await self.call_system.initiate_support_call(formatted_phone, user_name)
             
             if success:
@@ -458,14 +467,36 @@ Tente novamente:""",
                 )
             else:
                 await update.message.reply_text(
-                    "❌ Erro ao iniciar ligação. Tente novamente ou use o chat Telegram.",
-                    reply_markup=StoreKeyboards.back_main()
+                    f"""❌ ERRO NA LIGAÇÃO
+
+Não foi possível iniciar a ligação para {formatted_phone}.
+
+Possíveis motivos:
+• Número não registrado no WhatsApp
+• API temporariamente indisponível
+• Limitação da conta CallMeBot
+
+💬 Use o Chat Telegram:
+Clique no botão abaixo para suporte direto.""",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("💬 CHAT TELEGRAM", callback_data="telegram_support")],
+                        [InlineKeyboardButton("🔄 TENTAR NOVAMENTE", callback_data="request_call")],
+                        [InlineKeyboardButton("↩️ VOLTAR", callback_data="back_main")]
+                    ])
                 )
         except Exception as e:
-            logging.error(f"Erro ao processar ligação: {e}")
+            logging.error(f"Erro ao processar ligação para {formatted_phone}: {e}")
             await update.message.reply_text(
-                "❌ Erro interno. Tente novamente ou use o chat Telegram.",
-                reply_markup=StoreKeyboards.back_main()
+                f"""❌ ERRO INTERNO
+
+Detalhes técnicos: {str(e)}
+
+💬 Use o Chat Telegram:
+Nossa equipe está disponível via Telegram.""",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💬 CHAT TELEGRAM", callback_data="telegram_support")],
+                    [InlineKeyboardButton("↩️ VOLTAR", callback_data="back_main")]
+                ])
             )
     
     async def show_purchase_history(self, query, context):
