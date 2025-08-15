@@ -38,7 +38,7 @@ class StoreHandlers:
         # Verifica modo manutenção
         if self.db.get_setting("maintenance_mode") == "true":
             await update.message.reply_text(
-                "🔧 **Sistema em manutenção**\n\nO bot está temporariamente indisponível. Tente novamente mais tarde.")
+                "🔧 Sistema em manutenção\n\nO bot está temporariamente indisponível. Tente novamente mais tarde.")
             return
         
         # Registra ou atualiza usuário
@@ -95,16 +95,26 @@ class StoreHandlers:
             reply_markup=StoreKeyboards.main_menu()
         )
         
-        # Define menu lateral
-        await update.message.reply_text(
-            "Menu de comandos disponível:",
-            reply_markup=StoreKeyboards.side_menu()
-        )
+        # Menu lateral removido - será customizado pelo usuário
     
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manipula todos os callbacks do bot da loja"""
         query = update.callback_query
         await query.answer()
+        
+        # Proteção contra erro "no text to edit"
+        if not query.message or not query.message.text:
+            # Se não há texto para editar, envia nova mensagem
+            if hasattr(query.message, 'caption') and query.message.caption:
+                # É uma mensagem com foto - pode editar caption
+                pass
+            else:
+                # Sem texto nem caption - envia nova mensagem
+                await query.message.reply_text(
+                    "🔄 Carregando menu...",
+                    reply_markup=StoreKeyboards.main_menu()
+                )
+                return
         
         user_id = query.from_user.id
         data = query.data
@@ -174,7 +184,7 @@ class StoreHandlers:
     
     async def show_ranking_menu(self, query, context):
         """Mostra menu de ranking"""
-        ranking_text = """🏆 **RANKINGS DA LOJA**
+        ranking_text = """🏆 RANKINGS DA LOJA
 
 Escolha uma categoria para ver o ranking:"""
         
@@ -187,18 +197,18 @@ Escolha uma categoria para ver o ranking:"""
         support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
         
         await query.edit_message_text(
-            f"👨‍💻 **Suporte**\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}",
+            f"👨‍💻 Suporte\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}",
             reply_markup=StoreKeyboards.back_main())
     
     async def show_info(self, query, context):
         """Mostra informações do bot"""
         bot_info = await context.bot.get_me()
         
-        info_text = f"""ℹ️ **SOFTWARE INFO:**
-🤖**BOT:** @{bot_info.username}
-🤖**VERSION:** 1.0.0
+        info_text = f"""ℹ️ SOFTWARE INFO:
+🤖BOT: @{bot_info.username}
+🤖VERSION: 1.0.0
 
-🛠️ **DEVELOPER INFO:**
+🛠️ DEVELOPER INFO:
 O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o adm do mesmo, caso entre em contato para reclamar sobre material ou pedir para chamar o adm deste Bot ou algo do tipo, será bloqueado de imediato... Apenas o chame, caso queira conhecer os Bots disponíveis."""
         
         await query.edit_message_text(
@@ -210,7 +220,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         self.user_states[query.from_user.id] = WAITING_SEARCH_TERM
         
         await query.edit_message_text(
-            "🔍 **Pesquisar Produtos**\n\nDigite o nome do produto que deseja buscar:",
+            "🔍 Pesquisar Produtos\n\nDigite o nome do produto que deseja buscar:",
             reply_markup=StoreKeyboards.back_main())
     
     async def process_search(self, update: Update, context, search_term: str):
@@ -226,7 +236,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
             )
             return
         
-        search_text = f"🔍 **Resultados para '{search_term}':**\n\n"
+        search_text = f"🔍 Resultados para '{search_term}':\n\n"
         
         await update.message.reply_text(
             search_text,
@@ -254,9 +264,9 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         conn.close()
         
         if not purchases:
-            history_text = "📊 **Histórico de Compras**\n\nVocê ainda não realizou nenhuma compra."
+            history_text = "📊 Histórico de Compras\n\nVocê ainda não realizou nenhuma compra."
         else:
-            history_text = "📊 **Histórico de Compras**\n\n"
+            history_text = "📊 Histórico de Compras\n\n"
             
             for purchase in purchases:
                 history_text += f"• {purchase[0]} - R$ {purchase[1]:.2f}\n  📅 {purchase[2]}\n\n"
@@ -297,7 +307,7 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         self.db.create_transaction(user_id, "affiliate", conversion_value)
         
         await query.edit_message_text(
-            f"✅ **Conversão realizada!**\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}",
+            f"✅ Conversão realizada!\n\n{user['affiliate_points']} pontos convertidos em R$ {conversion_value:.2f}",
             reply_markup=StoreKeyboards.back_main())
     
     async def show_main_menu(self, query, context):
@@ -330,12 +340,12 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         user = self.db.get_user(query.from_user.id)
         
-        text = f"""🎟️ **Logins Premium | Acesso Exclusivo**
+        text = f"""🎟️ Logins Premium | Acesso Exclusivo
 
-🏦 **Carteira**
-💸 **Saldo Atual:** R$ {user['balance']:.2f}
+🏦 Carteira
+💸 Saldo Atual: R$ {user['balance']:.2f}
 
-**Produtos disponíveis:**"""
+Produtos disponíveis:"""
         
         # Filtra apenas produtos com estoque
         available_products = [p for p in products if p['stock_count'] > 0]
@@ -365,20 +375,20 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         user = self.db.get_user(query.from_user.id)
         
-        product_text = f"""⚜️**ACESSO:** {product['name']}
+        product_text = f"""⚜️ACESSO: {product['name']}
 
-💵 **Preço:** R$ {product['price']:.2f}
-💼 **Saldo Atual:** R$ {user['balance']:.2f}
-📥 **Estoque Disponível:** {product['stock_count']}
+💵 Preço: R$ {product['price']:.2f}
+💼 Saldo Atual: R$ {user['balance']:.2f}
+📥 Estoque Disponível: {product['stock_count']}
 
-🗒️ **Descrição:** {product['description']}
+🗒️ Descrição: {product['description']}
 
-**Aviso Importante:**
+Aviso Importante:
 O acesso é disponibilizado na hora. Não atendemos ligações nem ouvimos mensagens de áudio; pedimos que aguarde sua vez.
 Informamos que não realizamos reembolsos via Pix, apenas em créditos no bot, correspondendo aos dias restantes até o vencimento.
 Agradecemos pela compreensão e desejamos boas compras!
 
-♻️ **Garantia:** {product['duration']} dias"""
+♻️ Garantia: {product['duration']} dias"""
         
         has_stock = product['stock_count'] > 0
         
@@ -414,12 +424,12 @@ Agradecemos pela compreensão e desejamos boas compras!
             return
         
         # Mostra confirmação
-        confirm_text = f"""🛒 **CONFIRMAÇÃO DE COMPRA**
+        confirm_text = f"""🛒 CONFIRMAÇÃO DE COMPRA
 
-**Produto:** {product['name']}
-**Preço:** R$ {product['price']:.2f}
-**Seu saldo:** R$ {user['balance']:.2f}
-**Saldo após compra:** R$ {user['balance'] - product['price']:.2f}
+Produto: {product['name']}
+Preço: R$ {product['price']:.2f}
+Seu saldo: R$ {user['balance']:.2f}
+Saldo após compra: R$ {user['balance'] - product['price']:.2f}
 
 Confirma a compra?"""
         
@@ -490,21 +500,21 @@ Confirma a compra?"""
             instructions = self.get_product_instructions(product['name'])
             
             # Monta mensagem de sucesso
-            success_text = f"""✅ **COMPRA REALIZADA COM SUCESSO!**
+            success_text = f"""✅ COMPRA REALIZADA COM SUCESSO!
 
-**Produto:** {product['name']}
-**Preço:** R$ {product['price']:.2f}
+Produto: {product['name']}
+Preço: R$ {product['price']:.2f}
 
-📧 **E-mail:** `{login['email']}`
-🔐 **Senha:** `{login['password']}`
+📧 E-mail: `{login['email']}`
+🔐 Senha: `{login['password']}`
 
-📖 **INSTRUÇÕES DE USO:**
+📖 INSTRUÇÕES DE USO:
 {instructions}
 
 {login['additional_info'] if login['additional_info'] else ''}
 
-**Validade:** {product['duration']} dias
-**Novo saldo:** R$ {user['balance'] - product['price']:.2f}
+Validade: {product['duration']} dias
+Novo saldo: R$ {user['balance'] - product['price']:.2f}
 
 Obrigado pela compra! 🎉"""
             
@@ -551,18 +561,18 @@ Obrigado pela compra! 🎉"""
         
         conn.close()
         
-        profile_text = f"""🙋‍♂️ **Meu perfil**
+        profile_text = f"""🙋‍♂️ Meu perfil
 
-🔎 **Veja aqui os detalhes da sua conta:**
+🔎 Veja aqui os detalhes da sua conta:
 
-**👤 Informações:**
-🆔 **ID da Carteira:** {user_id}
-💰 **Saldo Atual:** R$ {user['balance']:.2f}
+👤 Informações:
+🆔 ID da Carteira: {user_id}
+💰 Saldo Atual: R$ {user['balance']:.2f}
 
-**📊 Suas movimentações:**
-—🛒 **Compras Realizadas:** {user['total_purchases']}
-—💠 **Pix Inseridos:** R$ {total_recharges:.2f}
-—🎁 **Gifts Resgatados:** R$ {total_gifts:.2f}"""
+📊 Suas movimentações:
+—🛒 Compras Realizadas: {user['total_purchases']}
+—💠 Pix Inseridos: R$ {total_recharges:.2f}
+—🎁 Gifts Resgatados: R$ {total_gifts:.2f}"""
         
         await query.edit_message_text(
             profile_text,
@@ -573,12 +583,12 @@ Obrigado pela compra! 🎉"""
         user = self.db.get_user(query.from_user.id)
         min_deposit = float(self.db.get_setting("min_deposit") or settings.MIN_DEPOSIT)
         
-        recharge_text = f"""💼 **ID da Carteira:** {query.from_user.id}
-💵 **Saldo Disponível:** R$ {user['balance']:.2f}
+        recharge_text = f"""💼 ID da Carteira: {query.from_user.id}
+💵 Saldo Disponível: R$ {user['balance']:.2f}
 
-💡**Selecione uma opção para recarregar:**
+💡Selecione uma opção para recarregar:
 
-🔻 **Recarga mínima:** R$ {min_deposit:.2f}"""
+🔻 Recarga mínima: R$ {min_deposit:.2f}"""
         
         await query.edit_message_text(
             recharge_text,
@@ -591,9 +601,9 @@ Obrigado pela compra! 🎉"""
         self.user_states[query.from_user.id] = WAITING_RECHARGE_AMOUNT
         
         await query.edit_message_text(
-            f"""ℹ️ **Informe o valor que deseja recarregar:**
+            f"""ℹ️ Informe o valor que deseja recarregar:
 
-🔻 **Recarga mínima:** R$ {min_deposit:.2f}
+🔻 Recarga mínima: R$ {min_deposit:.2f}
 
 ⚠️ Por favor, envie o valor que deseja recarregar agora.""",
             reply_markup=StoreKeyboards.back_main())
@@ -698,7 +708,7 @@ Obrigado pela compra! 🎉"""
             manual_result = self.manual_payment.create_manual_payment(amount, user_id)
             
             await update.message.reply_text(
-                f"💰 **Pagamento Manual**\n\n"
+                f"💰 Pagamento Manual\n\n"
                 f"Valor: R$ {amount:.2f}\n"
                 f"ID: {manual_result['payment_id']}\n\n"
                 f"Entre em contato com o suporte para confirmar o pagamento.",
@@ -763,7 +773,7 @@ Obrigado pela compra! 🎉"""
                 del self.pending_payments[user_id]
                 
                 await query.edit_message_text(
-                    f"✅ **Pagamento aprovado!**\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
+                    f"✅ Pagamento aprovado!\n\nR$ {payment_info['amount']:.2f} foram adicionados ao seu saldo.",
                     reply_markup=StoreKeyboards.back_main())
             else:
                 await query.answer("⏰ Pagamento ainda não foi aprovado.", show_alert=True)
@@ -849,7 +859,7 @@ Obrigado pela compra! 🎉"""
     
     async def id_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /id"""
-        await update.message.reply_text(f"🆔 **Seu id é:** {update.effective_user.id}")
+        await update.message.reply_text(f"🆔 Seu id é: {update.effective_user.id}")
     
     async def afiliados_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /afiliados"""
@@ -859,12 +869,12 @@ Obrigado pela compra! 🎉"""
         status = "Ativo" if settings.AFFILIATE_SYSTEM_ENABLED else "Inativo"
         points_per_recharge = self.db.get_setting("points_per_recharge") or settings.POINTS_PER_RECHARGE
         
-        affiliate_text = f"""ℹ️ **Status:** {status}
-📊 **Comissão por Indicação:** {points_per_recharge} pontos
-👥 **Total de Afiliados:** {affiliate_stats.get('affiliates_count', 0)}
-🔗 **Link para Indicar:** {affiliate_stats.get('affiliate_link', 'N/A')}
+        affiliate_text = f"""ℹ️ Status: {status}
+📊 Comissão por Indicação: {points_per_recharge} pontos
+👥 Total de Afiliados: {affiliate_stats.get('affiliates_count', 0)}
+🔗 Link para Indicar: {affiliate_stats.get('affiliate_link', 'N/A')}
 
-**Como Funciona?**
+Como Funciona?
 Copie seu link de indicação e envie para outras pessoas.
 Cada vez que alguém indicado por você fizer uma recarga no bot, você receberá uma porcentagem desse valor!
 Por exemplo, com uma comissão de 50%, se 5 pessoas indicadas recarregarem R$10,00 cada, você receberá R$25,00.
@@ -885,7 +895,7 @@ Indique mais e aumente seus ganhos!"""
 4. Selecione o perfil desejado
 5. Aproveite o conteúdo premium!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • NÃO adicione cartão próprio
 • NÃO mude senha ou e-mail
@@ -897,7 +907,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Aproveite a música premium sem anúncios!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • NÃO adicione forma de pagamento
 • Download offline disponível"""
@@ -909,7 +919,7 @@ Indique mais e aumente seus ganhos!"""
 4. Crie seu perfil personalizado
 5. Aproveite Disney, Marvel, Star Wars!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • Até 4 perfis simultâneos"""
         
@@ -919,7 +929,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Aproveite filmes e séries originais!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • NÃO use para compras na Amazon
 • Apenas para Prime Video"""
@@ -930,7 +940,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Assista novelas, séries e esportes!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • Conteúdo ao vivo disponível"""
         
@@ -940,7 +950,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Aproveite sem anúncios e com download!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • YouTube Music incluso"""
         
@@ -950,7 +960,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Assista animes em HD sem anúncios!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • Legendas e dublagens disponíveis"""
         
@@ -960,7 +970,7 @@ Indique mais e aumente seus ganhos!"""
 3. Digite o e-mail e senha fornecidos
 4. Use ChatGPT Plus ilimitado!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • GPT-4 disponível"""
         
@@ -970,7 +980,7 @@ Indique mais e aumente seus ganhos!"""
 3. Use as informações fornecidas
 4. Aproveite skins e diamantes!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • NÃO vincule outros métodos"""
         
@@ -979,7 +989,7 @@ Indique mais e aumente seus ganhos!"""
 2. Faça login com os dados fornecidos
 3. Aproveite o conteúdo premium!
 
-⚠️ **IMPORTANTE:**
+⚠️ IMPORTANTE:
 • NÃO altere dados da conta
 • NÃO adicione formas de pagamento
 • Use apenas para consumo do conteúdo

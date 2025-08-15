@@ -42,19 +42,19 @@ class NotificationSystem:
         # Data/hora da venda
         sale_time = datetime.now().strftime("%d/%m/%Y às %H:%M")
         
-        message = f"""🎉 **NOVA VENDA REALIZADA!** 🎉
+        message = f"""🎉 NOVA VENDA REALIZADA! 🎉
 
-{product_emoji} **Produto:** {product_info['name']}
-💰 **Valor:** R$ {purchase_info['amount']:.2f}
-🆔 **Cliente:** {user_info['first_name'] or 'Usuário'} (ID: {user_info['user_id']})
-⏰ **Data/Hora:** {sale_time}
-🔢 **ID da Compra:** #{purchase_info['id']}
+{product_emoji} Produto: {product_info['name']}
+💰 Valor: R$ {purchase_info['amount']:.2f}
+🆔 Cliente: {user_info['first_name'] or 'Usuário'} (ID: {user_info['user_id']})
+⏰ Data/Hora: {sale_time}
+🔢 ID da Compra: #{purchase_info['id']}
 
-📊 **Estatísticas do Produto:**
-📦 **Estoque Restante:** {product_info['stock_count'] - 1}
-🛒 **Total de Vendas:** {product_info['total_sales'] + 1}
+📊 Estatísticas do Produto:
+📦 Estoque Restante: {product_info['stock_count'] - 1}
+🛒 Total de Vendas: {product_info['total_sales'] + 1}
 
-🎯 **Loja João Store** | @Lojajoaostore_bot"""
+🎯 Loja João Store | @Lojajoaostore_bot"""
 
         return message
     
@@ -117,14 +117,14 @@ class NotificationSystem:
         try:
             recharge_time = datetime.now().strftime("%d/%m/%Y às %H:%M")
             
-            message = f"""💰 **NOVA RECARGA APROVADA!** 💰
+            message = f"""💰 NOVA RECARGA APROVADA! 💰
 
-💳 **Valor:** R$ {amount:.2f}
-🆔 **Cliente:** {user_info['first_name'] or 'Usuário'} (ID: {user_info['user_id']})
-💎 **Método:** {payment_method}
-⏰ **Data/Hora:** {recharge_time}
+💳 Valor: R$ {amount:.2f}
+🆔 Cliente: {user_info['first_name'] or 'Usuário'} (ID: {user_info['user_id']})
+💎 Método: {payment_method}
+⏰ Data/Hora: {recharge_time}
 
-🎯 **Loja João Store** | @Lojajoaostore_bot"""
+🎯 Loja João Store | @Lojajoaostore_bot"""
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
@@ -145,16 +145,16 @@ class NotificationSystem:
         try:
             register_time = datetime.now().strftime("%d/%m/%Y às %H:%M")
             
-            message = f"""👋 **NOVO USUÁRIO REGISTRADO!** 👋
+            message = f"""👋 NOVO USUÁRIO REGISTRADO! 👋
 
-🆔 **Nome:** {user_info['first_name'] or 'Usuário'}
-🔢 **ID:** {user_info['user_id']}
-⏰ **Data/Hora:** {register_time}"""
+🆔 Nome: {user_info['first_name'] or 'Usuário'}
+🔢 ID: {user_info['user_id']}
+⏰ Data/Hora: {register_time}"""
             
             if referred_by:
-                message += f"\n🎗️ **Indicado por:** {referred_by}"
+                message += f"\n🎗️ Indicado por: {referred_by}"
             
-            message += "\n\n🎯 **Loja João Store** | @Lojajoaostore_bot"
+            message += "\n\n🎯 Loja João Store | @Lojajoaostore_bot"
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,
@@ -176,25 +176,25 @@ class NotificationSystem:
             alert_time = datetime.now().strftime("%d/%m/%Y às %H:%M")
             
             if current_stock == 0:
-                message = f"""⚠️ **PRODUTO SEM ESTOQUE!** ⚠️
+                message = f"""⚠️ PRODUTO SEM ESTOQUE! ⚠️
 
-📦 **Produto:** {product_name}
-📉 **Estoque:** {current_stock} unidades
-⏰ **Data/Hora:** {alert_time}
+📦 Produto: {product_name}
+📉 Estoque: {current_stock} unidades
+⏰ Data/Hora: {alert_time}
 
-🚨 **REABASTECER URGENTE!**
+🚨 REABASTECER URGENTE!
 
-🎯 **Loja João Store** | @Admjoaostore_bot"""
+🎯 Loja João Store | @Admjoaostore_bot"""
             else:
-                message = f"""⚠️ **ESTOQUE BAIXO!** ⚠️
+                message = f"""⚠️ ESTOQUE BAIXO! ⚠️
 
-📦 **Produto:** {product_name}
-📉 **Estoque:** {current_stock} unidades restantes
-⏰ **Data/Hora:** {alert_time}
+📦 Produto: {product_name}
+📉 Estoque: {current_stock} unidades restantes
+⏰ Data/Hora: {alert_time}
 
-💡 **Considere reabastecer em breve**
+💡 Considere reabastecer em breve
 
-🎯 **Loja João Store** | @Admjoaostore_bot"""
+🎯 Loja João Store | @Admjoaostore_bot"""
             
             await self.bot.send_message(
                 chat_id=self.sales_channel_id,

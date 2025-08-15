@@ -50,13 +50,13 @@ class Settings:
     # Bot Messages
     MESSAGES = {
         'welcome_admin': """
-🛒 **Compras feitas:** {purchases}
-🎁 **GiftCard's resgatados:** {giftcards}
+🛒 Compras feitas: {purchases}
+🎁 GiftCard's resgatados: {giftcards}
 
-**Área afiliados**
-🎗️**Seu link de afiliado:** {affiliate_link}
-🎭 **Quantidade de afiliados:** {affiliates_count}
-🎖️ **Pontos de indicação:** {points}
+Área afiliados
+🎗️Seu link de afiliado: {affiliate_link}
+🎭 Quantidade de afiliados: {affiliates_count}
+🎖️ Pontos de indicação: {points}
 """,
         'welcome_store': """🥇 BEM-VINDO À NOSSA LOJA!
 
@@ -70,20 +70,20 @@ Descubra produtos com o melhor preço e qualidade!
 💸 Saldo: R${balance:.2f}
 🪪 Usuário: {username}""",
         'admin_dashboard': """
-⚙️ **DASHBOARD** @{bot_username}
-📅 **Vencimento:** {expiration}
-👑 **Vip:** {vip_status}
-🤖 **Software version:** {version}
+⚙️ DASHBOARD @{bot_username}
+📅 Vencimento: {expiration}
+👑 Vip: {vip_status}
+🤖 Software version: {version}
 
-📔 **Métrica do business**
-📊 **User:** {total_users}
-📈 **Receita total:** R$ {total_revenue:.2f}
-🗓️ **Receita mensal:** R$ {monthly_revenue:.2f}
-💠 **Receita de hoje:** R$ {daily_revenue:.2f}
-🥇 **Vendas total:** {total_sales}
-🏆 **Vendas hoje:** {daily_sales}
+📔 Métrica do business
+📊 User: {total_users}
+📈 Receita total: R$ {total_revenue:.2f}
+🗓️ Receita mensal: R$ {monthly_revenue:.2f}
+💠 Receita de hoje: R$ {daily_revenue:.2f}
+🥇 Vendas total: {total_sales}
+🏆 Vendas hoje: {daily_sales}
 
-🔧 **Use os botões abaixo para me configurar**
+🔧 Use os botões abaixo para me configurar
 """,
         'insufficient_balance': """
 Saldo insuficiente! Faltam R$ {missing:.2f}
@@ -91,19 +91,19 @@ Faça uma recarga e tente novamente.
 Seu saldo: R$ {balance:.2f}
 """,
         'payment_generated': """
-💰 **Comprar Saldo com Pix Automático:**
+💰 Comprar Saldo com Pix Automático:
 
-⏱️ **Expira em:** {expiration}
-💵 **Valor:** R$ {amount:.2f}
-✨ **ID da Recarga:** {payment_id}
+⏱️ Expira em: {expiration}
+💵 Valor: R$ {amount:.2f}
+✨ ID da Recarga: {payment_id}
 
-🗞️ **Atenção:** Este código é válido para apenas um único pagamento.
+🗞️ Atenção: Este código é válido para apenas um único pagamento.
 Se você utilizá-lo mais de uma vez, o saldo adicional será perdido sem direito a reembolso.
 
-💎 **Pix Copia e Cola:**
+💎 Pix Copia e Cola:
 {pix_code}
 
-💡 **Dica:** Clique no código acima para copiar.
+💡 Dica: Clique no código acima para copiar.
 
 🇧🇷 Após o pagamento, seu saldo será liberado instantaneamente.
 """

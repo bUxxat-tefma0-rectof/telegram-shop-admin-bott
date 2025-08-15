@@ -152,7 +152,7 @@ class AdminBot:
         try:
             await self.application.bot.send_message(
                 chat_id=chat_id,
-                text=f"🔔 **NOTIFICAÇÃO ADMIN**\n\n{message}",
+                text=f"🔔 NOTIFICAÇÃO ADMIN\n\n{message}",
                 parse_mode='Markdown'
             )
         except Exception as e:

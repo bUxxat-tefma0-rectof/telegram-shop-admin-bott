@@ -166,7 +166,7 @@ COMPRAS:
             await update.message.reply_text("📦 Nenhum produto disponível para alertas.")
             return
         
-        alerts_text = "🔔 **Sistema de Alertas**\n\nClique em um produto para ativar/desativar alertas:\n\n"
+        alerts_text = "🔔 Sistema de Alertas\n\nClique em um produto para ativar/desativar alertas:\n\n"
         
         keyboard = []
         for product in products:
@@ -273,7 +273,7 @@ COMPRAS:
         conn.close()
         
         # Envia notificação
-        alert_message = f"🤖 **{product_name.upper()} ABASTECIDO NO BOT**"
+        alert_message = f"🤖 {product_name.upper()} ABASTECIDO NO BOT"
         
         for user_row in users_to_notify:
             try:
