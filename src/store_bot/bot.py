@@ -271,8 +271,8 @@ COMPRAS:
             except Exception as e:
                 logger.error(f"Erro ao enviar alerta para {user_row[0]}: {e}")
     
-    def run(self):
-        """Executa o bot"""
+    async def run(self):
+        """Executa o bot de forma async"""
         logger.info("🛒 Bot da loja iniciando...")
         
         # Verifica configurações essenciais
@@ -296,12 +296,16 @@ COMPRAS:
         conn.commit()
         conn.close()
         
-        # Inicia o bot
+        # Inicia o bot de forma async
         try:
-            self.application.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True
-            )
+            async with self.application:
+                await self.application.start()
+                await self.application.updater.start_polling()
+                
+                # Mantém rodando
+                import asyncio
+                await asyncio.Event().wait()
+                
         except KeyboardInterrupt:
             logger.info("🛑 Bot da loja parado pelo usuário")
         except Exception as e:

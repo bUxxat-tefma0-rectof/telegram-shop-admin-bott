@@ -158,8 +158,8 @@ class AdminBot:
         except Exception as e:
             logger.error(f"Erro ao enviar notificação: {e}")
     
-    def run(self):
-        """Executa o bot"""
+    async def run(self):
+        """Executa o bot de forma async"""
         logger.info("🤖 Bot administrativo iniciando...")
         
         # Verifica configurações essenciais
@@ -173,12 +173,16 @@ class AdminBot:
         if settings.OWNER_USER_ID and settings.OWNER_USER_ID != settings.ADMIN_USER_ID:
             self.db.set_setting(f"admin_{settings.OWNER_USER_ID}", "true")
         
-        # Inicia o bot
+        # Inicia o bot de forma async
         try:
-            self.application.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True
-            )
+            async with self.application:
+                await self.application.start()
+                await self.application.updater.start_polling()
+                
+                # Mantém rodando
+                import asyncio
+                await asyncio.Event().wait()
+                
         except KeyboardInterrupt:
             logger.info("🛑 Bot administrativo parado pelo usuário")
         except Exception as e:
