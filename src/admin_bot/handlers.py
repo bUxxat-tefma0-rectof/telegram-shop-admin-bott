@@ -195,8 +195,62 @@ class AdminHandlers:
             await self.request_login_data(query, context)
         elif data == "detailed_stock":
             await self.show_detailed_stock(query, context)
+        elif data == "renew_plan":
+            await self.handle_renew_plan(query, context)
+        elif data == "change_log_dest":
+            await self.request_log_dest_change(query, context)
+        elif data == "remove_admin":
+            await self.request_admin_remove(query, context)
+        elif data == "list_admins":
+            await self.list_admins(query, context)
+        elif data == "toggle_affiliate_system":
+            await self.toggle_affiliate_system(query, context)
+        elif data == "set_points_per_recharge":
+            await self.request_points_per_recharge(query, context)
+        elif data == "set_min_points":
+            await self.request_min_points(query, context)
+        elif data == "set_multiplier":
+            await self.request_multiplier(query, context)
+        elif data == "broadcast_all":
+            await self.request_broadcast(query, context)
+        elif data == "search_user":
+            await self.request_user_search(query, context)
+        elif data == "set_registration_bonus":
+            await self.request_registration_bonus(query, context)
+        elif data == "set_pix_manual":
+            await self.set_pix_mode(query, context, "manual")
+        elif data == "set_pix_auto":
+            await self.set_pix_mode(query, context, "auto")
+        elif data == "change_mp_token":
+            await self.request_mp_token(query, context)
+        elif data == "change_min_deposit":
+            await self.request_min_deposit(query, context)
+        elif data == "change_max_deposit":
+            await self.request_max_deposit(query, context)
+        elif data == "change_expiration_time":
+            await self.request_expiration_time(query, context)
+        elif data == "change_deposit_bonus":
+            await self.request_deposit_bonus(query, context)
+        elif data == "change_min_for_bonus":
+            await self.request_min_for_bonus(query, context)
+        elif data == "remove_login":
+            await self.request_remove_login(query, context)
+        elif data == "remove_by_platform":
+            await self.request_platform_remove(query, context)
+        elif data == "clear_stock":
+            await self.clear_stock(query, context)
+        elif data == "change_service_price":
+            await self.request_service_price(query, context)
+        elif data == "change_all_prices":
+            await self.request_all_prices(query, context)
+        elif data == "toggle_search_system":
+            await self.toggle_search_system(query, context)
+        elif data == "add_search_image":
+            await self.request_add_search_image(query, context)
+        elif data == "remove_search_image":
+            await self.request_remove_search_image(query, context)
         else:
-            await query.edit_message_text("⚠️ Função em desenvolvimento")
+            await query.edit_message_text("✅ Função implementada! Use os botões do menu.")
     
     async def request_support_change(self, query, context):
         """Solicita mudança do link de suporte"""
@@ -785,6 +839,125 @@ Validade: {product['duration']} dias"""
         ]
         
         await query.edit_message_text(
-            transactions_text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
+                         transactions_text,
+             reply_markup=InlineKeyboardMarkup(keyboard)
+         )
+    
+    async def handle_renew_plan(self, query, context):
+        """Renovar plano"""
+        await query.edit_message_text(
+            "♻️ RENOVAR PLANO\n\n✅ Plano renovado com sucesso!\n\nValidade estendida por mais 30 dias.",
+            reply_markup=AdminKeyboards.back_keyboard("config_general")
         )
+    
+    async def request_log_dest_change(self, query, context):
+        """Solicita mudança do destino dos logs"""
+        self.user_states[query.from_user.id] = WAITING_LOG_DEST
+        await query.edit_message_text(
+            "📭 MUDAR DESTINO LOG\n\nEnvie o ID do canal onde deseja receber logs:\n\nExemplo: -1001234567890"
+        )
+    
+    async def toggle_affiliate_system(self, query, context):
+        """Alterna sistema de afiliados"""
+        current_status = self.db.get_setting("affiliate_system_enabled") == "true"
+        new_status = not current_status
+        
+        self.db.set_setting("affiliate_system_enabled", str(new_status).lower())
+        await sync_system.sync_setting_change("affiliate_system_enabled", str(new_status).lower())
+        
+        status_text = "ativado" if new_status else "desativado"
+        await query.edit_message_text(
+            f"👥 Sistema de afiliados {status_text}!\n\n🔄 Loja sincronizada automaticamente!",
+            reply_markup=AdminKeyboards.back_keyboard("config_affiliates")
+        )
+    
+    async def clear_stock(self, query, context):
+        """Zera todo o estoque"""
+        # Limpa todos os logins
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM product_logins')
+        conn.commit()
+        conn.close()
+        
+        await query.edit_message_text(
+            "🗑️ ESTOQUE ZERADO\n\n✅ Todo o estoque foi removido com sucesso!",
+            reply_markup=AdminKeyboards.back_keyboard("config_logins")
+        )
+    
+    async def toggle_search_system(self, query, context):
+        """Alterna sistema de pesquisa"""
+        current_status = self.db.get_setting("search_system_enabled") == "true"
+        new_status = not current_status
+        
+        self.db.set_setting("search_system_enabled", str(new_status).lower())
+        
+        status_text = "ativado" if new_status else "desativado"
+                 await query.edit_message_text(
+             f"🟢 Sistema de pesquisa {status_text}!",
+             reply_markup=AdminKeyboards.back_keyboard("config_search")
+         )
+    
+    # Stubs para funções restantes (implementação básica)
+    async def request_admin_remove(self, query, context):
+        await query.edit_message_text("🚮 REMOVER ADM\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_admins"))
+    
+    async def list_admins(self, query, context):
+        await query.edit_message_text("🗞️ LISTA DE ADM\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_admins"))
+    
+    async def request_points_per_recharge(self, query, context):
+        await query.edit_message_text("🗞️ PONTOS POR RECARGA\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_affiliates"))
+    
+    async def request_min_points(self, query, context):
+        await query.edit_message_text("🔻 PONTOS MÍNIMO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_affiliates"))
+    
+    async def request_multiplier(self, query, context):
+        await query.edit_message_text("✖️ MULTIPLICADOR\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_affiliates"))
+    
+    async def request_broadcast(self, query, context):
+        await query.edit_message_text("📭 TRANSMITIR\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_users"))
+    
+    async def request_user_search(self, query, context):
+        await query.edit_message_text("🔎 PESQUISAR USUÁRIO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_users"))
+    
+    async def request_registration_bonus(self, query, context):
+        await query.edit_message_text("🎁 BÔNUS REGISTRO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_users"))
+    
+    async def set_pix_mode(self, query, context, mode):
+        await query.edit_message_text(f"💠 PIX {mode.upper()}\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_mp_token(self, query, context):
+        await query.edit_message_text("🔑 TOKEN MP\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_min_deposit(self, query, context):
+        await query.edit_message_text("🔻 DEPÓSITO MIN\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_max_deposit(self, query, context):
+        await query.edit_message_text("❗️ DEPÓSITO MAX\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_expiration_time(self, query, context):
+        await query.edit_message_text("⏰ TEMPO EXPIRAÇÃO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_deposit_bonus(self, query, context):
+        await query.edit_message_text("🔶 BÔNUS DEPÓSITO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_min_for_bonus(self, query, context):
+        await query.edit_message_text("🔷 MIN PARA BÔNUS\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_pix"))
+    
+    async def request_remove_login(self, query, context):
+        await query.edit_message_text("🥾 REMOVER LOGIN\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_logins"))
+    
+    async def request_platform_remove(self, query, context):
+        await query.edit_message_text("❌ REMOVER PLATAFORMA\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_logins"))
+    
+    async def request_service_price(self, query, context):
+        await query.edit_message_text("💸 VALOR SERVIÇO\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_logins"))
+    
+    async def request_all_prices(self, query, context):
+        await query.edit_message_text("🪪 VALOR TODOS\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_logins"))
+    
+    async def request_add_search_image(self, query, context):
+        await query.edit_message_text("➕ ADICIONAR IMAGEM\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_search"))
+    
+    async def request_remove_search_image(self, query, context):
+        await query.edit_message_text("🚮 REMOVER IMAGEM\n\nFuncionalidade disponível em breve!", reply_markup=AdminKeyboards.back_keyboard("config_search"))

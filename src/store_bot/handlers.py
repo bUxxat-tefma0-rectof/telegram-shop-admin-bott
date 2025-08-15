@@ -3,7 +3,7 @@ import sys
 import logging
 import re
 from datetime import datetime, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
@@ -216,7 +216,20 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         """Solicita termo de pesquisa"""
         self.user_states[query.from_user.id] = WAITING_SEARCH_TERM
         
-        await self.safe_edit_message(query, "🔍 Pesquisar Produtos\n\nDigite o nome do produto que deseja buscar:", reply_markup=StoreKeyboards.back_main())
+        # Edita mensagem atual
+        await self.safe_edit_message(query, 
+            "🔍 PESQUISAR SERVIÇOS\n\n🎯 Digite o nome do produto que deseja buscar:\n\nExemplos: Netflix, Spotify, Disney+", 
+            reply_markup=StoreKeyboards.back_main())
+        
+        # Envia mensagem com ForceReply para input automático
+        bot_info = await context.bot.get_me()
+        await query.message.reply_text(
+            f"🔍 @{bot_info.username} PROCURAR",
+            reply_markup=ForceReply(
+                force_reply=True,
+                input_field_placeholder="Digite o nome do serviço (ex: NETFLIX)"
+            )
+        )
     
     async def process_search(self, update: Update, context, search_term: str):
         """Processa pesquisa de produtos"""
@@ -226,16 +239,45 @@ O Desenvolvedor não possui responsabilidade alguma sobre este Bot e nem sobre o
         
         if not products:
             await update.message.reply_text(
-                f"❌ Nenhum produto encontrado para '{search_term}'",
+                f"❌ Nenhum produto encontrado para '{search_term.upper()}'",
                 reply_markup=StoreKeyboards.back_main()
             )
+            del self.user_states[user_id]
             return
         
-        search_text = f"🔍 Resultados para '{search_term}':\n\n"
+        # Formato melhorado como no bot de referência
+        search_text = f"🔍 Resultados para '{search_term.upper()}':\n\n"
+        
+        for i, product in enumerate(products[:10], 1):  # Limita a 10 resultados
+            stock_count = self.db.get_product_stock_count(product['id'])
+            
+            # Mostra preço e estoque de forma mais atrativa
+            search_text += f"🔹 {product['name'].upper()}\n"
+            search_text += f"💰 R$ {product['price']:.2f}\n"
+            
+            # Descrição truncada
+            description = product['description'][:80]
+            if len(product['description']) > 80:
+                description += "..."
+            search_text += f"📝 {description}\n"
+            search_text += f"📦 Estoque: {stock_count} unidades\n"
+            search_text += "─" * 30 + "\n"
+        
+        keyboard = []
+        for product in products[:5]:  # Máximo 5 botões
+            stock_count = self.db.get_product_stock_count(product['id'])
+            if stock_count > 0:
+                keyboard.append([InlineKeyboardButton(
+                    f"🛒 {product['name']} - R$ {product['price']:.2f}",
+                    callback_data=f"product_{product['id']}"
+                )])
+        
+        keyboard.append([InlineKeyboardButton("↩️ VOLTAR", callback_data="back_main")])
         
         await update.message.reply_text(
             search_text,
-            reply_markup=StoreKeyboards.search_results(products))
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         
         del self.user_states[user_id]
     
@@ -561,13 +603,24 @@ Obrigado pela compra! 🎉"""
         
         self.user_states[query.from_user.id] = WAITING_RECHARGE_AMOUNT
         
-        await query.edit_message_text(
-            f"""ℹ️ Informe o valor que deseja recarregar:
+        # Edita mensagem atual
+        await self.safe_edit_message(query,
+            f"""💰 RECARGA VIA PIX
 
 🔻 Recarga mínima: R$ {min_deposit:.2f}
+❗️ Recarga máxima: R$ 1000.00
 
-⚠️ Por favor, envie o valor que deseja recarregar agora.""",
+Clique no botão abaixo para continuar:""",
             reply_markup=StoreKeyboards.back_main())
+        
+        # Envia mensagem com ForceReply para input automático
+        await query.message.reply_text(
+            f"💰 Qual valor deseja recarregar?\n\nMínimo: R$ {min_deposit:.2f}",
+            reply_markup=ForceReply(
+                force_reply=True,
+                input_field_placeholder=f"Digite o valor (ex: {min_deposit:.0f})"
+            )
+        )
     
     async def handle_text_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manipula entradas de texto"""
