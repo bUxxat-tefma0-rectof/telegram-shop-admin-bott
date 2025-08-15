@@ -840,7 +840,8 @@ Obrigado pela compra! 🎉"""
         
     async def process_affiliate_points(self, user_id: int, amount: float):
         """Processa pontos de afiliado para quem indicou"""
-        if not settings.AFFILIATE_SYSTEM_ENABLED:
+        affiliate_enabled = self.db.get_setting("affiliate_system_enabled")
+        if affiliate_enabled != "true":
             return
         
         user = self.db.get_user(user_id)

@@ -229,17 +229,33 @@ COMPRAS:
     
     async def error_handler(self, update: Update, context):
         """Manipula erros"""
-        logger.error(f"Exception while handling an update: {context.error}")
+        import traceback
+        
+        error_msg = f"Exception while handling an update: {context.error}"
+        logger.error(error_msg)
+        logger.error("Traceback:")
+        logger.error(traceback.format_exc())
         
         # Tenta enviar mensagem de erro para o usuário
         try:
             if update and update.effective_chat:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
-                    text="❌ Ocorreu um erro interno. Tente novamente."
+                    text=f"❌ Erro interno detectado:\n\n`{str(context.error)[:100]}...`\n\nTente novamente em alguns momentos.",
+                    parse_mode='Markdown'
                 )
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem de erro: {e}")
+            
+            # Fallback - tenta enviar sem markdown
+            try:
+                if update and update.effective_chat:
+                    await context.bot.send_message(
+                        chat_id=update.effective_chat.id,
+                        text="❌ Ocorreu um erro interno. Tente novamente."
+                    )
+            except:
+                pass
     
     async def send_stock_alert(self, product_name: str):
         """Envia alerta de estoque abastecido"""
