@@ -47,6 +47,10 @@ class Settings:
     # Maintenance Mode
     MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'false').lower() == 'true'
     
+    # WhatsApp CallMeBot API
+    WHATSAPP_PHONE = os.getenv('WHATSAPP_PHONE', '')
+    WHATSAPP_API_KEY = os.getenv('WHATSAPP_API_KEY', '')
+    
     # Bot Messages
     MESSAGES = {
         'welcome_admin': """

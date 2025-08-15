@@ -14,6 +14,7 @@ from database.models import Database
 from config.settings import settings
 from utils.payment_system import PaymentSystem, ManualPaymentSystem
 from utils.notification_system import NotificationSystem
+from utils.whatsapp_notification import WhatsAppNotifier
 from store_bot.keyboards import StoreKeyboards
 
 # Estados da conversa
@@ -30,6 +31,8 @@ class StoreHandlers:
         self.pending_payments = {}
         # Sistema de notificações para o canal
         self.notification_system = NotificationSystem(settings.STORE_BOT_TOKEN)
+        # Sistema de notificação WhatsApp
+        self.whatsapp_notifier = WhatsAppNotifier(settings.WHATSAPP_PHONE, settings.WHATSAPP_API_KEY) if settings.WHATSAPP_PHONE and settings.WHATSAPP_API_KEY else None
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /start da loja"""
@@ -194,10 +197,33 @@ Escolha uma categoria para ver o ranking:"""
         await self.safe_edit_message(query, ranking_text, reply_markup=StoreKeyboards.ranking_menu())
     
     async def handle_support(self, query, context):
-        """Redireciona para o suporte"""
+        """Redireciona para o suporte e envia notificação WhatsApp"""
+        user_id = query.from_user.id
         support_link = self.db.get_setting("support_link") or settings.SUPPORT_LINK
         
-        await self.safe_edit_message(query, f"👨‍💻 Suporte\n\nClique no link abaixo para falar com nosso suporte:\n\n{support_link}", reply_markup=StoreKeyboards.back_main())
+        # Busca dados do usuário
+        user = self.db.get_user(user_id)
+        if user:
+            # Envia notificação WhatsApp
+            if self.whatsapp_notifier:
+                user_data = {
+                    'first_name': query.from_user.first_name or 'Usuário',
+                    'username': query.from_user.username or 'sem_username',
+                    'user_id': user_id,
+                    'balance': user.get('balance', 0)
+                }
+                
+                # Envia notificação de forma assíncrona sem bloquear o usuário
+                try:
+                    await self.whatsapp_notifier.send_support_request(user_data)
+                except Exception as e:
+                    logging.error(f"Erro ao enviar notificação WhatsApp: {e}")
+        
+        await self.safe_edit_message(
+            query, 
+            f"👨‍💻 SUPORTE SOLICITADO!\n\n✅ Sua solicitação foi enviada!\n\n📱 Você também pode entrar em contato:\n{support_link}\n\n⏰ Aguarde nosso retorno em breve!", 
+            reply_markup=StoreKeyboards.back_main()
+        )
     
     async def show_info(self, query, context):
         """Mostra informações do bot"""
@@ -501,6 +527,19 @@ Confirma a compra?"""
             user_info = self.db.get_user(user_id)
             purchase_info = {'id': purchase_id, 'amount': product['price']}
             await self.notification_system.send_sale_notification(user_info, product, purchase_info)
+            
+            # Envia notificação WhatsApp da venda
+            if self.whatsapp_notifier:
+                try:
+                    purchase_data = {
+                        'user_name': query.from_user.first_name or 'Usuário',
+                        'product_name': product['name'],
+                        'price': product['price'],
+                        'user_id': user_id
+                    }
+                    await self.whatsapp_notifier.send_new_sale_notification(purchase_data)
+                except Exception as e:
+                    logging.error(f"Erro ao enviar notificação WhatsApp de venda: {e}")
             
             # Verifica se precisa enviar alerta de estoque baixo
             new_stock = product['stock_count'] - 1
@@ -810,6 +849,18 @@ Clique no botão abaixo para continuar:""",
             amount, 
             "PIX Automático" if self.payment_system else "PIX Manual"
         )
+        
+        # Envia notificação WhatsApp da recarga
+        if self.whatsapp_notifier:
+            try:
+                recharge_data = {
+                    'user_name': user_info.get('first_name', 'Usuário'),
+                    'amount': amount,
+                    'user_id': user_id
+                }
+                await self.whatsapp_notifier.send_new_recharge_notification(recharge_data)
+            except Exception as e:
+                logging.error(f"Erro ao enviar notificação WhatsApp de recarga: {e}")
         
         # Processa pontos de afiliado
         await self.process_affiliate_points(user_id, amount)
